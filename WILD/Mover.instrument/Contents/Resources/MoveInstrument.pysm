@@ -1,0 +1,170 @@
+from IIKit import *
+import iStarWrapper
+import iStar
+
+import jre.debug
+from jre.compat import namedtuple
+import jre.geom
+Point = namedtuple('Point', 'x y')
+NSPoint = Point
+Size = namedtuple('Size', 'width height')
+Rect = namedtuple('Rect', 'origin size')
+NSMakeRect = lambda x, y, w, h: Rect(Point(x, y), Size(w, h))
+
+import math
+
+SCREEN_WIDTH, SCREEN_HEIGHT = 2560, 1600
+BUTTON1 = "Button1"
+BUTTON2 = "Button2"
+BUTTON3 = "Button3"
+
+class MoveInstrument(SMInstrument):
+    @jre.debug.trap_exceptions
+    def __init__(self, instrumentID, sceneGraph):
+        super(SMTestInstrument, self).__init__(instrumentID)
+        
+        self.name = u"WILD Mover" # FIXME refactor
+        self.verb = u"Move object"
+        
+        self._sg = sceneGraph
+        
+        self.cursor = iStarWrapper.Object.new("Cursor", "My Cursor")
+        self.cursor.x = 900
+        self.cursor.y = 1000
+        self.cursor.radius = 300
+        self.cursor.color = "Green"
+        self.cursor.hidden = False
+        self._sg.add_child(self.cursor)
+        
+        self.toMove = None
+
+
+    State start:
+        Transition pointOnObject(self, PointEvent, guard=self.isPointingOnObject) >> hovering:
+            self.updateCursorPosition(event)
+        
+        Transition point(self, PointEvent):
+            self.updateCursorPosition(event)
+    
+    State hovering:
+        def enter(self):
+            self.cursor.color = "Blue"
+        
+        def leave(self):
+            self.cursor.color = "Green"
+            
+        Transition unHover(self, PointEvent, guard=lambda self, event: not self.isPointingOnObject) >> start:
+            self.updateCursorPosition(event)
+        
+        Transition point(self, PointEvent):
+            self.updateCursorPosition(event)
+        
+        Transition press(self, ButtonPressEvent, device=BUTTON1) >> moving:
+            point = Point(event.value.x, event.value.y)
+            obj = self.getObjectAtPoint(point)
+            self.toMove = obj
+            self.moveOffset = Point(obj.x - point.x, obj.y - point.y)
+    
+    State moving:
+        def enter(self):
+            self.cursor.color = "Blue"
+        
+        def leave(self):
+            self.cursor.color = "Green"
+            
+        Transition point(self, PointEvent):
+            self.updateCursorPosition(event)
+            point = Point(event.value.x, event.value.y)
+            self.moveObjectWithOffsetTo(self.toMove, self.moveOffset, point)
+        
+        Transition release(self, ButtonReleaseEvent, device=BUTTON1) >> start:
+            pass
+    
+    
+    def updateCursorPosition(self, event):
+        x, y = self.convertPointFromScreenToWall((event.value.x, event.value.y),
+                                                 event.value.screen)
+        
+        self.cursor.x = x
+        self.cursor.y = y
+    
+    #@iStar.Action #TODO
+    def moveObjectWithOffsetTo(self, obj, offset, point):
+        self.moveObjectTo(obj, Point(point.x + offset.x, point.y + offset.y))
+        
+    #@iStar.Action #TODO
+    def moveObjectTo(self, obj, point):
+        obj.x = point.x
+        obj.y = point.y
+    
+    def convertPointFromScreenToWall(self, point, screen):
+        sx, sy = point
+        ox, oy = self.calculateScreenOriginFromDescriptor(screen)
+        return ox + sx, oy + sy
+
+    def calculateScreenOriginFromDescriptor(self, descriptor):
+        assert len(descriptor) == 3, "Invalid screen descriptor"
+        descriptor = descriptor.upper()
+        col, row, screen = descriptor
+        col = ord(col) - ord('A') # Convert from A to 0, B to 1, etc.
+        row = 3 - (int(row) - 1) # Start at 0 and flip
+        screen = 0 if screen == 'L' else 1 #
+        
+        return SCREEN_WIDTH*(2*col+screen), SCREEN_HEIGHT*row
+    
+    def isPointingOnObject(self, event):
+        return self.getObjectAtPoint((event.value.x, event.value.y)) is not None
+        
+    def getObjectAtPoint(self, point):
+        x, y = point
+        for node in self._sg:
+            if ShapeProtocol.objectConforms(node):
+            #if hasattr(node, 'x') and hasattr(node, 'y') and hasattr(node, 'width') and hasattr(node, 'height'):
+                print node, "appears to be a shapeish thing"
+                nx = node.x
+                ny = node.y
+                nw = node.width
+                nh = node.height
+                
+                if hasattr(node, 'rotation'):
+                    rotation = node.rotation
+                else:
+                    rotation = 0
+                
+                nodeRect = NSMakeRect(nx, ny, nw, nh)
+                cx, cy = self.cursor.x, self.cursor.y
+                cr = self.cursor.radius
+                cursorRect = NSMakeRect(cx - cr, cy - cr, 2*cr, 2*cr)
+                if self.intersects(cursorRect, nodeRect, rotation):
+                    return node
+        
+        return None
+    
+    def intersects(self, normal, rotated, rotation):
+        around_point = NSPoint(rotated.origin.x+rotated.size.width/2, rotated.origin.y+rotated.size.height/2)
+        
+        lower_left = self.rotate_point_around_point(NSPoint(rotated.origin.x, rotated.origin.y), around_point, rotation)
+        upper_left = self.rotate_point_around_point(NSPoint(rotated.origin.x, rotated.origin.y+rotated.size.height), around_point, rotation)
+        upper_right = self.rotate_point_around_point(NSPoint(rotated.origin.x+rotated.size.width, rotated.origin.y+rotated.size.height), around_point, rotation)
+        lower_right = self.rotate_point_around_point(NSPoint(rotated.origin.x+rotated.size.width, rotated.origin.y), around_point, rotation)
+        
+        x = min([lower_left.x, upper_left.x, upper_right.x, lower_right.x])
+        y = min([lower_left.y, upper_left.y, upper_right.y, lower_right.y])
+        width = max([lower_left.x, upper_left.x, upper_right.x, lower_right.x]) - x
+        height = max([lower_left.y, upper_left.y, upper_right.y, lower_right.y]) - y
+        
+        newRect = NSMakeRect(x, y, width, height)
+        return jre.geom.rectIntersectsRect(normal, newRect)
+        
+    def rotate_point_around_point(self, point, around, angle): 
+        #point and around are NSPoint/tuple, angle in degrees
+           angled = math.radians(angle)
+           px, py = point
+           ax, ay = around
+           x = px - ax
+           y = py - ay
+           return NSPoint((math.cos(angled) * x - math.sin(angled) * y)+ax, (math.sin(angled) * x + math.cos(angled) * y)+ay)
+
+class ShapeProtocol(iStar.Protocol):
+    signature = [ ['x y width height'.split() ],
+                ]
