@@ -21,7 +21,7 @@ BUTTON3 = "Button3"
 class MoveInstrument(SMInstrument):
     @jre.debug.trap_exceptions
     def __init__(self, instrumentID, sceneGraph):
-        super(SMTestInstrument, self).__init__(instrumentID)
+        super(MoveInstrument, self).__init__(instrumentID)
         
         self.name = u"WILD Mover" # FIXME refactor
         self.verb = u"Move object"
@@ -31,7 +31,7 @@ class MoveInstrument(SMInstrument):
         self.cursor = iStarWrapper.Object.new("Cursor", "My Cursor")
         self.cursor.x = 900
         self.cursor.y = 1000
-        self.cursor.radius = 300
+        self.cursor.radius = 100
         self.cursor.color = "Green"
         self.cursor.hidden = False
         self._sg.add_child(self.cursor)
@@ -40,8 +40,8 @@ class MoveInstrument(SMInstrument):
 
 
     State start:
-        Transition pointOnObject(self, PointEvent, guard=self.isPointingOnObject) >> hovering:
-            self.updateCursorPosition(event)
+        #Transition pointOnObject(self, PointEvent, guard=self.isPointingOnObject) >> self.hovering:
+        #    self.updateCursorPosition(event)
         
         Transition point(self, PointEvent):
             self.updateCursorPosition(event)
@@ -53,31 +53,51 @@ class MoveInstrument(SMInstrument):
         def leave(self):
             self.cursor.color = "Green"
             
-        Transition unHover(self, PointEvent, guard=lambda self, event: not self.isPointingOnObject) >> start:
+        Transition unHover(self, PointEvent, guard=lambda event: not self.isPointingOnObject(event)) >> self.start:
             self.updateCursorPosition(event)
         
         Transition point(self, PointEvent):
             self.updateCursorPosition(event)
         
-        Transition press(self, ButtonPressEvent, device=BUTTON1) >> moving:
-            point = Point(event.value.x, event.value.y)
+        Transition press(self, ButtonPressEvent, device=BUTTON1) >> self.moving:
+            pass
+
+        Transition stamp(self, ButtonPressEvent, device=BUTTON2):
+            print "button 2"
+            point = Point(self.cursor.x, self.cursor.y)
             obj = self.getObjectAtPoint(point)
-            self.toMove = obj
-            self.moveOffset = Point(obj.x - point.x, obj.y - point.y)
+            assert hasattr(obj, 'stamp')
+            if obj.stamp == 'Accepted':
+                print '-> Rejected'
+                obj.stamp = 'Rejected'
+            elif obj.stamp == 'Rejected':
+                print '-> None'
+                obj.stamp = 'None'
+            elif obj.stamp == 'None':
+                print '-> Accepted'
+                obj.stamp = 'Accepted'
+
     
     State moving:
         def enter(self):
+            point = Point(self.cursor.x, self.cursor.y)
+            obj = self.getObjectAtPoint(point)
+            print "Grabbing object at", point
+            self.toMove = obj
+            self.moveOffset = Point(obj.x - point.x, obj.y - point.y)
             self.cursor.color = "Blue"
         
         def leave(self):
             self.cursor.color = "Green"
+            self.toMove = None
+            self.moveOffset = None
             
         Transition point(self, PointEvent):
             self.updateCursorPosition(event)
-            point = Point(event.value.x, event.value.y)
+            point = Point(*self.convertPointFromScreenToWall((event.value.x, event.value.y), event.value.screen))
             self.moveObjectWithOffsetTo(self.toMove, self.moveOffset, point)
         
-        Transition release(self, ButtonReleaseEvent, device=BUTTON1) >> start:
+        Transition release(self, ButtonReleaseEvent, device=BUTTON1) >> self.start:
             pass
     
     
@@ -90,10 +110,12 @@ class MoveInstrument(SMInstrument):
     
     #@iStar.Action #TODO
     def moveObjectWithOffsetTo(self, obj, offset, point):
+        print 'move from', point, 'with offset', offset,
         self.moveObjectTo(obj, Point(point.x + offset.x, point.y + offset.y))
         
     #@iStar.Action #TODO
     def moveObjectTo(self, obj, point):
+        print 'to', point
         obj.x = point.x
         obj.y = point.y
     
@@ -118,8 +140,8 @@ class MoveInstrument(SMInstrument):
     def getObjectAtPoint(self, point):
         x, y = point
         for node in self._sg:
-            if ShapeProtocol.objectConforms(node):
-            #if hasattr(node, 'x') and hasattr(node, 'y') and hasattr(node, 'width') and hasattr(node, 'height'):
+            #if ShapeProtocol.objectConforms(node):
+            if hasattr(node, 'x') and hasattr(node, 'y') and hasattr(node, 'width') and hasattr(node, 'height'):
                 print node, "appears to be a shapeish thing"
                 nx = node.x
                 ny = node.y

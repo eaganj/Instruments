@@ -12,6 +12,7 @@ Rect = namedtuple('Rect', 'origin size')
 NSMakeRect = lambda x, y, w, h: Rect(Point(x, y), Size(w, h))
 
 import math
+import time
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 2560, 1600
 BUTTON1 = "Button1"
@@ -113,9 +114,11 @@ class SMTestInstrument(SMInstrument):
     
     def getObjectAtPoint(self, point):
         x, y = point
+        startTime = time.time()
         for node in self._sg:
-            if ShapeProtocol.objectConforms(node):
-            #if hasattr(node, 'x') and hasattr(node, 'y') and hasattr(node, 'width') and hasattr(node, 'height'):
+            #if ShapeProtocol.objectConforms(node):
+            isShape = hasattr(node, 'x') and hasattr(node, 'y') and hasattr(node, 'width') and hasattr(node, 'height')
+            if isShape:
                 print node, "appears to be a shapeish thing"
                 nx = node.x
                 ny = node.y
@@ -133,6 +136,8 @@ class SMTestInstrument(SMInstrument):
                 cursorRect = NSMakeRect(cx - cr, cy - cr, 2*cr, 2*cr)
                 if self.intersects(cursorRect, nodeRect, rotation):
                     self.cursor.color = "Blue"                
+        endTime = time.time()
+        print "took", endTime - startTime, "seconds to figure that out"
     
     def intersects(self, normal, rotated, rotation):
         around_point = NSPoint(rotated.origin.x+rotated.size.width/2, rotated.origin.y+rotated.size.height/2)
