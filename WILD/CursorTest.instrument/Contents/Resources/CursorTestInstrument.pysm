@@ -114,8 +114,8 @@ class SMTestInstrument(SMInstrument):
     def getObjectAtPoint(self, point):
         x, y = point
         for node in self._sg:
-            #if ShapeProtocol.objectConforms(node):
-            if hasattr(node, 'x') and hasattr(node, 'y') and hasattr(node, 'width') and hasattr(node, 'height'):
+            if ShapeProtocol.objectConforms(node):
+            #if hasattr(node, 'x') and hasattr(node, 'y') and hasattr(node, 'width') and hasattr(node, 'height'):
                 print node, "appears to be a shapeish thing"
                 nx = node.x
                 ny = node.y
