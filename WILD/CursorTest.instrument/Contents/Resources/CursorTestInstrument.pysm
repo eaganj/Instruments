@@ -20,15 +20,14 @@ BUTTON2 = "Button2"
 BUTTON3 = "Button3"
 
 class SMTestInstrument(SMInstrument):
+    name = u"State Machine Tester 2" # FIXME refactor
+    verb = u"Test state machine 2"
+    
     @jre.debug.trap_exceptions
-    def __init__(self, instrumentID, sceneGraph):
-        super(SMTestInstrument, self).__init__(instrumentID)
+    def __init__(self):
+        super(SMTestInstrument, self).__init__()
         
-        self.name = u"State Machine Tester 2" # FIXME refactor
-        self.verb = u"Test state machine 2"
-        
-        self._sg = sceneGraph
-        
+        self._sg = self.sceneGraph
         self.cursor = iStarWrapper.Object.new("Cursor", "My Cursor")
         self.cursor.x = 900
         self.cursor.y = 1000
