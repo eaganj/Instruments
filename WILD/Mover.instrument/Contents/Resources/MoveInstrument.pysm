@@ -34,8 +34,8 @@ class MoveInstrument(SMInstrument):
 
 
     State start:
-        #Transition pointOnObject(self, PointEvent, guard=self.isPointingOnObject) >> self.hovering:
-        #    self.updateCursorPosition(event)
+        Transition pointOnObject(self, PointEvent, guard=self.isPointingOnObject) >> self.hovering:
+            self.updateCursorPosition(event)
         
         Transition point(self, PointEvent):
             self.updateCursorPosition(event)
@@ -69,7 +69,7 @@ class MoveInstrument(SMInstrument):
             obj = self.getObjectAtPoint(point)
             print "Grabbing object at", point
             self.toMove = obj
-            self.moveOffset = geom.delta(point, obj)
+            self.moveOffset = geom.delta(point, Point(obj.x, obj.y))
             self.cursor.color = "Blue"
         
         def leave(self):
@@ -104,11 +104,19 @@ class MoveInstrument(SMInstrument):
             self.zoomOrigin = None
         
         Transition point(self, PointEvent):
-            point = Point(event.value.x, event.value.y)
-            factor = 1.0 + geom.dist(point, self.zoomOrigin) / 1000
+            point = self.convertPointFromScreenToWall(
+                                                (event.value.x, event.value.y),
+                                                event.value.screen)
+
+            factor = 1.0 + (geom.dist(point, self.zoomOrigin) / 1000)
             factor = factor if point.y > self.zoomOrigin.y else 1.0 / factor
+
+            self.cursor.radius = 100 * factor
             
-            self.zoomObjectUnderCursorBy(factor)
+            self.zoomObjectBy(self.toZoom, factor)
+        
+        Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
+            pass
             
     
     
@@ -133,12 +141,10 @@ class MoveInstrument(SMInstrument):
             print '-> Accepted'
             obj.stamp = 'Accepted'
     
-    def zoomObjectUnderCursorBy(self, factor):
-        point = Point(self.cursor.x, self.cursor.y)
-        obj = self.getObjectAtPoint(point)
+    def zoomObjectBy(self, obj, factor):
         assert hasattr(obj, 'zoom')
         print "Zooming", obj, "by", factor
-        obj.zoom = factor
+        obj.zoom = 100 * factor
     
     #@iStar.Action #TODO
     def moveObjectWithOffsetTo(self, obj, offset, point):
