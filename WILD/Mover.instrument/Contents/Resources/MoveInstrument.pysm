@@ -57,19 +57,10 @@ class MoveInstrument(SMInstrument):
             pass
 
         Transition stamp(self, ButtonPressEvent, device=BUTTON2):
-            print "button 2"
-            point = Point(self.cursor.x, self.cursor.y)
-            obj = self.getObjectAtPoint(point)
-            assert hasattr(obj, 'stamp')
-            if obj.stamp == 'Accepted':
-                print '-> Rejected'
-                obj.stamp = 'Rejected'
-            elif obj.stamp == 'Rejected':
-                print '-> None'
-                obj.stamp = 'None'
-            elif obj.stamp == 'None':
-                print '-> Accepted'
-                obj.stamp = 'Accepted'
+            self.stampObjectUnderCursor()
+        
+        Transition zoom(self, ButtonPressEvent, device=BUTTON3) >> self.zooming:
+            pass
 
     
     State moving:
@@ -92,8 +83,33 @@ class MoveInstrument(SMInstrument):
                                                              event.value.screen))
             self.moveObjectWithOffsetTo(self.toMove, self.moveOffset, point)
         
+        Transition stamp(self, ButtonPressEvent, device=BUTTON2):
+            self.stampObjectUnderCursor()
+                
         Transition release(self, ButtonReleaseEvent, device=BUTTON1) >> self.start:
             pass
+    
+    State zooming:
+        def enter(self):
+            point = Point(self.cursor.x, self.cursor.y)
+            obj = self.getObjectAtPoint(point)
+            self.toZoom = obj
+            self.zoomOrigin = point
+            self.cursor.color = "1.0:0.0:0.0:0.25"
+        
+        def leave(self):
+            self.cursor.color = "Green"
+            self.cursor.radius = 100
+            self.toZoom = None
+            self.zoomOrigin = None
+        
+        Transition point(self, PointEvent):
+            point = Point(event.value.x, event.value.y)
+            factor = 1.0 + geom.dist(point, self.zoomOrigin) / 1000
+            factor = factor if point.y > self.zoomOrigin.y else 1.0 / factor
+            
+            self.zoomObjectUnderCursorBy(factor)
+            
     
     
     def updateCursorPosition(self, event):
@@ -102,6 +118,27 @@ class MoveInstrument(SMInstrument):
         
         self.cursor.x = x
         self.cursor.y = y
+    
+    def stampObjectUnderCursor(self):
+        point = Point(self.cursor.x, self.cursor.y)
+        obj = self.getObjectAtPoint(point)
+        assert hasattr(obj, 'stamp')
+        if obj.stamp == 'Accepted':
+            print '-> Rejected'
+            obj.stamp = 'Rejected'
+        elif obj.stamp == 'Rejected':
+            print '-> None'
+            obj.stamp = 'None'
+        elif obj.stamp == 'None':
+            print '-> Accepted'
+            obj.stamp = 'Accepted'
+    
+    def zoomObjectUnderCursorBy(self, factor):
+        point = Point(self.cursor.x, self.cursor.y)
+        obj = self.getObjectAtPoint(point)
+        assert hasattr(obj, 'zoom')
+        print "Zooming", obj, "by", factor
+        obj.zoom = factor
     
     #@iStar.Action #TODO
     def moveObjectWithOffsetTo(self, obj, offset, point):
