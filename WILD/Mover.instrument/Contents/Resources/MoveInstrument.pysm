@@ -146,7 +146,8 @@ class MoveInstrument(SMInstrument):
             
             self.cursor.radius = 100*factor
             
-            self.zoomObjectWithViewportToWithAnchor(self.toZoom, self.toZoomOriginalFrame, factor, point)
+            rotation = self.toZoom.rotation
+            self.zoomObjectWithViewportRotationAndAnchorTo(self.toZoom, self.toZoomOriginalFrame, rotation, point, factor)
         
         Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
             pass
@@ -179,7 +180,12 @@ class MoveInstrument(SMInstrument):
         print "Zooming", obj, "by", factor
         obj.zoom = 100 * factor
     
-    def zoomObjectWithViewportToWithAnchor(self, obj, objFrame, factor, anchor):
+    def zoomObjectWithViewportRotationAndAnchorTo(self, obj, objFrame, rotation, anchor, factor):
+        assert hasattr(obj, 'width') and hasattr(obj, 'height') and hasattr(obj, 'x') and hasattr(obj, 'y')
+        center = Point(objFrame.origin.x + objFrame.size.width/2, objFrame.origin.y + objFrame.size.height/2)
+        unrotatedFrame = geom.rotateRectAroundPoint(objFrame, center, -rotation)
+    
+    def zoomObjectWithViewportAnchoredAtTo(self, obj, objFrame, anchor, factor):
         assert hasattr(obj, 'width') and hasattr(obj, 'height') and hasattr(obj, 'x') and hasattr(obj, 'y')
         (obj.x, obj.y), (obj.width, obj.height) = self.scaleRectFromPointBy(objFrame, anchor, factor)
         
