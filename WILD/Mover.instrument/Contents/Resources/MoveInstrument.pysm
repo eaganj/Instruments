@@ -171,9 +171,9 @@ class MoveInstrument(SMInstrument):
             self.initialRotation = None
         
         Transition point(self, PointEvent):
-            point = self.convertPointFromScreenToWall((event.value.x, event.value.y), event.screen)
+            point = self.convertPointFromScreenToWall((event.value.x, event.value.y), event.value.screen)
             
-            factor = geom.dist(point, self.rotationOrigin) * 0.18
+            factor = geom.dist(point, self.rotationOrigin) * 0.05
             self.target.rotation = self.initialRotation + factor
         
         Transition release(self, ButtonReleaseEvent, device=BUTTON2) >> self.start:
