@@ -117,7 +117,7 @@ class MoveInstrument(SMInstrument):
 
             self.cursor.radius = 100 * factor
             
-            self.zoomObjectBy(self.toZoom, factor)
+            self.zoomObjectTo(self.toZoom, factor)
         
         Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
             pass
@@ -128,6 +128,7 @@ class MoveInstrument(SMInstrument):
             obj = self.getObjectAtPoint(point)
             self.toZoom = obj
             self.zoomOrigin = point
+            self.toZoomOriginalFrame = MakeRect(obj.x, obj.y, obj.width, obj.height)
             self.cursor.color = ZoomingColor
         
         def leave(self):
@@ -145,7 +146,7 @@ class MoveInstrument(SMInstrument):
             
             self.cursor.radius = 100*factor
             
-            self.zoomObjectViewportBy(self.toZoom, factor, point)
+            self.zoomObjectWithViewportToWithAnchor(self.toZoom, self.toZoomOriginalFrame, factor, point)
         
         Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
             pass
@@ -173,15 +174,14 @@ class MoveInstrument(SMInstrument):
             print '-> Accepted'
             obj.stamp = 'Accepted'
     
-    def zoomObjectBy(self, obj, factor):
+    def zoomObjectTo(self, obj, factor):
         assert hasattr(obj, 'zoom')
         print "Zooming", obj, "by", factor
         obj.zoom = 100 * factor
     
-    def zoomObjectViewportByWithAnchor(self, obj, factor, anchor):
+    def zoomObjectWithViewportToWithAnchor(self, obj, objFrame, factor, anchor):
         assert hasattr(obj, 'width') and hasattr(obj, 'height') and hasattr(obj, 'x') and hasattr(obj, 'y')
-        objFrame = MakeRect(obj.x, obj.y, obj.width, obj.height)
-        obj.x, obj.y, obj.width, obj.height = self.scaleRectFromPointBy(objFrame, anchor, factor)
+        (obj.x, obj.y), (obj.width, obj.height) = self.scaleRectFromPointBy(objFrame, anchor, factor)
         
     
     def scaleRectFromPointBy(self, rect, point, factor):
@@ -194,9 +194,15 @@ class MoveInstrument(SMInstrument):
         
         rw, rh = factor * w, factor * h
         ox, oy = factor * ox, factor * oy # scale offset
+
+        result = MakeRect(x, y, rw, rh)
+
+        print "Scaled", rect
+        print "to    ", result
+        print "by", factor
+        print "with offset", ox, oy
         
-        return MakeRect(x-ox, y-oy, rw, rh)
-        
+        return result
     
     #@iStar.Action #TODO
     def moveObjectWithOffsetTo(self, obj, offset, point):
