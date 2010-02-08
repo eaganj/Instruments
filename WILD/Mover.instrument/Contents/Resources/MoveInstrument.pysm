@@ -15,6 +15,7 @@ BUTTON3 = "Button3"
 NormalCursorColor = "0:1:0:0.5"
 HighlightCursorColor = "0.05:1:1:0.5"
 ZoomingColor = "1.0:0.0:0.0:0.25"
+RotatingColor = ZoomingColor
 
 class MoveInstrument(SMInstrument):
     name = u"WILD Mover" # FIXME refactor
@@ -60,8 +61,10 @@ class MoveInstrument(SMInstrument):
         Transition press(self, ButtonPressEvent, device=BUTTON1) >> self.moving:
             pass
 
-        Transition stamp(self, ButtonPressEvent, device=BUTTON2):
-            self.stampObjectUnderCursor()
+        #Transition stamp(self, ButtonPressEvent, device=BUTTON2):
+        #    self.stampObjectUnderCursor()
+        Transition rotate(self, ButtonPressEvent, device=BUTTON2) >> self.rotate:
+            pass
         
         Transition zoom(self, ButtonPressEvent, device=BUTTON3) >> self.zoomingViewport:
             pass
@@ -151,7 +154,30 @@ class MoveInstrument(SMInstrument):
         
         Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
             pass
+    
+    State rotating:
+        def enter(self):
+            point = Point(self.cursor.x, self.cursor.y)
+            obj = self.getObjectAtPoint(point)
+            self.target = obj
+            self.rotationOrigin = point
+            self.initialRotation = obj.rotation
+            self.cursor.color = RotatingColor
+        
+        def leave(self):
+            self.cursor.color = NormalCursorColor
+            self.target = None
+            self.rotationOrigin = None
+            self.initialRotation = None
+        
+        Transition point(self, PointEvent):
+            point = self.convertPointFromScreenToWall((event.value.x, event.value.y), event.screen)
             
+            factor = geom.dist(point, self.rotationOrigin) * 0.18
+            self.target.rotation = self.initialRotation + factor
+        
+        Transition release(self, ButtonReleaseEvent, device=BUTTON2) >> self.start:
+            pass
     
     
     def updateCursorPosition(self, event):
