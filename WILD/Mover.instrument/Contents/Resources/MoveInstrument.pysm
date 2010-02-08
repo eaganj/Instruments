@@ -147,7 +147,7 @@ class MoveInstrument(SMInstrument):
             self.cursor.radius = 100*factor
             
             rotation = self.toZoom.rotation
-            self.zoomObjectWithViewportRotationAndAnchorTo(self.toZoom, self.toZoomOriginalFrame, rotation, point, factor)
+            self.zoomObjectWithViewportRotationAndAnchorTo(self.toZoom, self.toZoomOriginalFrame, rotation, self.zoomOrigin, factor)
         
         Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
             pass
@@ -183,7 +183,14 @@ class MoveInstrument(SMInstrument):
     def zoomObjectWithViewportRotationAndAnchorTo(self, obj, objFrame, rotation, anchor, factor):
         assert hasattr(obj, 'width') and hasattr(obj, 'height') and hasattr(obj, 'x') and hasattr(obj, 'y')
         center = Point(objFrame.origin.x + objFrame.size.width/2, objFrame.origin.y + objFrame.size.height/2)
-        unrotatedFrame = geom.rotateRectAroundPoint(objFrame, center, -rotation)
+        #unrotatedFrame = geom.rotateRectAroundPoint(objFrame, center, -rotation)
+        unrotatedFrame = objFrame
+        unrotatedAnchor = geom.rotatePointAroundPoint(anchor, center, -rotation)
+        scaledFrame = self.scaleRectFromPointBy(unrotatedFrame, unrotatedAnchor, factor)
+        #scaledCenter = Point(scaledFrame.origin.x + scaledFrame.size.width/2, 
+        #                     scaledFrame.origin.y + scaledFrame.size.height/2)
+        #rotatedRect = geom.rotateRectAroundPoint(scaledFrame, scaledCenter, rotation)
+        (obj.x, obj.y), (obj.width, obj.height) = scaledFrame#rotatedRect
     
     def zoomObjectWithViewportAnchoredAtTo(self, obj, objFrame, anchor, factor):
         assert hasattr(obj, 'width') and hasattr(obj, 'height') and hasattr(obj, 'x') and hasattr(obj, 'y')
@@ -199,14 +206,14 @@ class MoveInstrument(SMInstrument):
         ox, oy = ax-x, ay-y # offset
         
         rw, rh = factor * w, factor * h
-        ox, oy = factor * ox, factor * oy # scale offset
+        dox, doy = factor * ox - ox, factor * oy - oy
 
-        result = MakeRect(x, y, rw, rh)
+        result = MakeRect(x-dox, y-doy, rw, rh)
 
         print "Scaled", rect
         print "to    ", result
         print "by", factor
-        print "with offset", ox, oy
+        print "with offset", dox, doy
         
         return result
     
