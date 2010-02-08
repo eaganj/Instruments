@@ -14,6 +14,7 @@ BUTTON3 = "Button3"
 
 NormalCursorColor = "0:1:0:0.5"
 HighlightCursorColor = "0.05:1:1:0.5"
+ZoomingColor = "1.0:0.0:0.0:0.25"
 
 class MoveInstrument(SMInstrument):
     name = u"WILD Mover" # FIXME refactor
@@ -62,7 +63,7 @@ class MoveInstrument(SMInstrument):
         Transition stamp(self, ButtonPressEvent, device=BUTTON2):
             self.stampObjectUnderCursor()
         
-        Transition zoom(self, ButtonPressEvent, device=BUTTON3) >> self.zooming:
+        Transition zoom(self, ButtonPressEvent, device=BUTTON3) >> self.zoomingViewport:
             pass
 
     
@@ -98,7 +99,7 @@ class MoveInstrument(SMInstrument):
             obj = self.getObjectAtPoint(point)
             self.toZoom = obj
             self.zoomOrigin = point
-            self.cursor.color = "1.0:0.0:0.0:0.25"
+            self.cursor.color = ZoomingColor
         
         def leave(self):
             self.cursor.color = NormalCursorColor
@@ -117,6 +118,34 @@ class MoveInstrument(SMInstrument):
             self.cursor.radius = 100 * factor
             
             self.zoomObjectBy(self.toZoom, factor)
+        
+        Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
+            pass
+    
+    State zoomingViewport:
+        def enter(self):
+            point = Point(self.cursor.x, self.cursor.y)
+            obj = self.getObjectAtPoint(point)
+            self.toZoom = obj
+            self.zoomOrigin = point
+            self.cursor.color = ZoomingColor
+        
+        def leave(self):
+            self.cursor.color = NormalCursorColor
+            self.cursor.radius = 100
+            self.toZoom = None
+            self.zoomOrigin = None
+        
+        Transition point(self, PointEvent):
+            point = self.convertPointFromScreenToWall((event.value.x, event.value.y),
+                                                      event.value.screen)
+            
+            factor = 1.0 + (geom.dist(point, self.zoomOrigin) / 1000)
+            factor = factor if point.y > self.zoomOrigin.y else 1.0 / factor
+            
+            self.cursor.radius = 100*factor
+            
+            self.zoomObjectViewportBy(self.toZoom, factor, point)
         
         Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
             pass
@@ -148,6 +177,26 @@ class MoveInstrument(SMInstrument):
         assert hasattr(obj, 'zoom')
         print "Zooming", obj, "by", factor
         obj.zoom = 100 * factor
+    
+    def zoomObjectViewportByWithAnchor(self, obj, factor, anchor):
+        assert hasattr(obj, 'width') and hasattr(obj, 'height') and hasattr(obj, 'x') and hasattr(obj, 'y')
+        objFrame = MakeRect(obj.x, obj.y, obj.width, obj.height)
+        obj.x, obj.y, obj.width, obj.height = self.scaleRectFromPointBy(objFrame, anchor, factor)
+        
+    
+    def scaleRectFromPointBy(self, rect, point, factor):
+        '''
+        Return a `rect` scaled by a `factor` with `point` treated as an anchor for scaling.
+        '''
+        (x, y), (w, h) = rect
+        ax, ay = point # anchor
+        ox, oy = ax-x, ay-y # offset
+        
+        rw, rh = factor * w, factor * h
+        ox, oy = factor * ox, factor * oy # scale offset
+        
+        return MakeRect(x-ox, y-oy, rw, rh)
+        
     
     #@iStar.Action #TODO
     def moveObjectWithOffsetTo(self, obj, offset, point):
