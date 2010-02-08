@@ -63,7 +63,7 @@ class MoveInstrument(SMInstrument):
 
         #Transition stamp(self, ButtonPressEvent, device=BUTTON2):
         #    self.stampObjectUnderCursor()
-        Transition rotate(self, ButtonPressEvent, device=BUTTON2) >> self.rotate:
+        Transition rotate(self, ButtonPressEvent, device=BUTTON2) >> self.rotating:
             pass
         
         Transition zoom(self, ButtonPressEvent, device=BUTTON3) >> self.zoomingViewport:
