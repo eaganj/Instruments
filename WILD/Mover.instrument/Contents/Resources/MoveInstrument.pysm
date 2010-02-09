@@ -235,12 +235,6 @@ class MoveInstrument(SMInstrument):
         dox, doy = factor * ox - ox, factor * oy - oy
 
         result = MakeRect(x-dox, y-doy, rw, rh)
-
-        print "Scaled", rect
-        print "to    ", result
-        print "by", factor
-        print "with offset", dox, doy
-        
         return result
     
     #@iStar.Action #TODO
