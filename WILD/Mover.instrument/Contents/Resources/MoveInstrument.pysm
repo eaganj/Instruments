@@ -16,6 +16,12 @@ BUTTON5 = "Button5"
 BUTTON6 = "Button6"
 BUTTON7 = "Button7"
 SCOTTY_BUTTON = "ScottyButton"
+MOVE_BUTTON = BUTTON1
+ROTATE_BUTTON = BUTTON2
+SCALE_BUTTON = BUTTON3
+ZOOM_BUTTON = BUTTON4
+STAMP_BUTTON = BUTTON5
+
 
 NormalCursorColor = "0:1:0:0.5"
 HighlightCursorColor = "0.05:1:1:0.5"
@@ -80,19 +86,19 @@ class MoveInstrument(SMInstrument):
         Transition point(self, PointEvent):
             self.updateCursorPosition(event)
         
-        Transition press(self, ButtonPressEvent, device=BUTTON1) >> self.moving:
+        Transition press(self, ButtonPressEvent, device=MOVE_BUTTON) >> self.moving:
             pass
 
-        Transition rotate(self, ButtonPressEvent, device=BUTTON2) >> self.rotating:
+        Transition rotate(self, ButtonPressEvent, device=ROTATE_BUTTON) >> self.rotating:
             pass
         
-        Transition zoomViewport(self, ButtonPressEvent, device=BUTTON3) >> self.zoomingViewport:
+        Transition zoomViewport(self, ButtonPressEvent, device=SCALE_BUTTON) >> self.zoomingViewport:
             pass
         
-        Transition zoomImage(self, ButtonPressEvent, device=BUTTON4) >> self.zooming:
+        Transition zoomImage(self, ButtonPressEvent, device=ZOOM_BUTTON) >> self.zooming:
             pass
             
-        Transition stamp(self, ButtonPressEvent, device=BUTTON5):
+        Transition stamp(self, ButtonPressEvent, device=STAMP_BUTTON):
            self.stampObjectUnderCursor()
     
     State moving:
@@ -100,6 +106,10 @@ class MoveInstrument(SMInstrument):
             point = Point(self.cursor.x, self.cursor.y)
             obj = self.getObjectAtPoint(point)
             print "Grabbing object at", point
+            order = self._sg.stacking_order[:]
+            order.remove(obj)
+            order.append(obj)
+            self._sg.stacking_order = order
             self.toMove = obj
             self.moveOffset = geom.delta(point, Point(obj.x, obj.y))
             self.cursor.color = HighlightCursorColor
@@ -115,10 +125,10 @@ class MoveInstrument(SMInstrument):
                                                              event.value.screen))
             self.moveObjectWithOffsetTo(self.toMove, self.moveOffset, point)
         
-        Transition stamp(self, ButtonPressEvent, device=BUTTON2):
+        Transition stamp(self, ButtonPressEvent, device=STAMP_BUTTON):
             self.stampObjectUnderCursor()
                 
-        Transition release(self, ButtonReleaseEvent, device=BUTTON1) >> self.start:
+        Transition release(self, ButtonReleaseEvent, device=MOVE_BUTTON) >> self.start:
             pass
     
     State zooming:
@@ -147,7 +157,7 @@ class MoveInstrument(SMInstrument):
             
             self.zoomObjectTo(self.toZoom, factor)
         
-        Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
+        Transition release(self, ButtonReleaseEvent, device=ZOOM_BUTTON) >> self.start:
             pass
     
     State zoomingViewport:
@@ -178,7 +188,7 @@ class MoveInstrument(SMInstrument):
             rotation = self.toZoom.rotation
             self.zoomObjectWithViewportRotationAndAnchorTo(self.toZoom, self.toZoomOriginalFrame, rotation, self.zoomOrigin, factor)
         
-        Transition release(self, ButtonReleaseEvent, device=BUTTON3) >> self.start:
+        Transition release(self, ButtonReleaseEvent, device=SCALE_BUTTON) >> self.start:
             pass
     
     State rotating:
@@ -202,7 +212,7 @@ class MoveInstrument(SMInstrument):
             factor = geom.dist(point, self.rotationOrigin) * 0.05
             self.target.rotation = self.initialRotation + factor
         
-        Transition release(self, ButtonReleaseEvent, device=BUTTON2) >> self.start:
+        Transition release(self, ButtonReleaseEvent, device=ROTATE_BUTTON) >> self.start:
             pass
     
     
