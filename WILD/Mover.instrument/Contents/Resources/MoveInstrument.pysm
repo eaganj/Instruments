@@ -113,8 +113,8 @@ class MoveInstrument(SMInstrument):
             obj = self.getObjectAtPoint(point)
             print "Grabbing object at", point
             order = self._sg.stacking_order[:]
-            order.remove(obj)
-            order.append(obj)
+            order.remove(obj.name)
+            order.append(obj.name)
             self._sg.stacking_order = order
             self.toMove = obj
             self.moveOffset = geom.delta(point, Point(obj.x, obj.y))
