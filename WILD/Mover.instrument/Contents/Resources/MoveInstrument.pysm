@@ -154,6 +154,7 @@ class MoveInstrument(SMInstrument):
         def leave(self):
             self.cursor.color = NormalCursorColor
             self.cursor.radius = 100
+            self.toZoom.rescale = True
             self.toZoom = None
             self.zoomOrigin = None
         
