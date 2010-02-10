@@ -31,6 +31,9 @@ RotatingColor = ZoomingColor
 NormalCursorColor = "0:1:0:0.5"
 HighlightCursorColor = "0.05:1:1:0.5"
 
+NormalCursorColor = "0:1:0:0.5"
+HighlightCursorColor = "0.05:1:1:0.5"
+
 class MoveInstrument(SMInstrument):
     name = u"WILD Mover" # FIXME refactor
     verb = u"Move object"
