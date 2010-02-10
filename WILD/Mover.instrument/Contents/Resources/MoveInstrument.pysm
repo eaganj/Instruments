@@ -49,6 +49,23 @@ class MoveInstrument(SMInstrument):
         
         Transition point(self, PointEvent):
             self.updateCursorPosition(event)
+        
+        Transition dropScotty(self, ButtonPressEvent, device=SCOTTY_BUTTON):
+            scottyWindow = self.getScottyWindow()
+            if not scottyWindow:
+                print "*** Warning: no window to drop!"
+                return
+
+            scottyWindow.x = self.cursor.x
+            scottyWindow.y = self.cursor.y
+            scottyWindow.hidden = False
+            print "Showing Scotty window at", scottyWindow.x, scottyWindow.y, scottyWindow
+
+        Transition buttonEvent(self, ButtonPressEvent):
+            print "Misc button event", event, event.device, event.value
+
+        Transition default(self, WILDEvent):
+            print "Received unexpected event", event, event.device, event.value
     
     State hovering:
         def enter(self):
@@ -77,15 +94,6 @@ class MoveInstrument(SMInstrument):
             
         Transition stamp(self, ButtonPressEvent, device=BUTTON5):
            self.stampObjectUnderCursor()
-        
-        Transition dropScotty(self, ButtonPressEvent, device=SCOTTY_BUTTON):
-            scottyWindow = self.getScottyWindow()
-            if not scottyWindow:
-                return
-                
-            scottyWindow.x = self.cursor.x
-            scottyWindow.y = self.cursor.y
-            scottyWindow.hidden = False
     
     State moving:
         def enter(self):
@@ -307,9 +315,15 @@ class MoveInstrument(SMInstrument):
         return None
     
     def getScottyWindow(self):
+        result = None
         for node in self._sg:
-            if node.type == 'Scotty':
-                return node
+            if hasattr(node, 'type'):
+                if node.type == 'Scotty':
+                    result = node
+            else:
+                print "node:", node, 'has no .type'
+        
+        return result
     
 class ShapeProtocol(iStar.Protocol):
     signature = [ ['x y width height'.split() ],
