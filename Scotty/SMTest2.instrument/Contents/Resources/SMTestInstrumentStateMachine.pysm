@@ -1,0 +1,24 @@
+from StateMachines import *
+from IIKit import *
+
+class SMTestInstrumentStateMachine(statemachine):
+    colors = [NSColor.redColor(), NSColor.blueColor(), NSColor.greenColor()]
+    colorIndex = -1
+    
+    def __init__(self, instrument):
+        super(SMTestInstrumentStateMachine, self).__init__()
+        self._instrument = instrument
+    
+    State start:
+        Transition press(self, LeftMouseDown) >> self.drawing:
+            self.colorIndex = (self.colorIndex + 1) % len(self.colors)
+            color = self.colors[self.colorIndex]
+            self._instrument.addPath(event.window(), color)
+    
+    State drawing:
+        Transition release(self, LeftMouseUp) >> self.start:
+            pass
+        
+        Transition move(self, LeftMouseDragged):
+            self._instrument.addDrawPoint(event.locationInWindow(), event.window())
+    
