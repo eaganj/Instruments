@@ -12,12 +12,12 @@ class Path(object):
         self.color = None
         self.points = []
     
-class ScottySMTestGlassView(NSView):
+class ScottySMTest2GlassView(NSView):
     def __new__(cls, frame, instrument):
         return cls.alloc().initWithFrame_instrument_(frame, instrument)
         
     def initWithFrame_instrument_(self, frame, instrument):
-        self = super(ScottySMTestGlassView, self).initWithFrame_(frame)
+        self = super(ScottySMTest2GlassView, self).initWithFrame_(frame)
         if not self:
             return self
         
@@ -58,4 +58,4 @@ class ScottySMTestGlassView(NSView):
             
             path.stroke()
     
-SMTestGlassView = ScottySMTestGlassView
+SMTest2GlassView = ScottySMTest2GlassView

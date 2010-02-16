@@ -73,6 +73,9 @@ class MoveInstrument(SMInstrument):
             scottyWindow.hidden = False
             print "Showing Scotty window at", scottyWindow.x, scottyWindow.y, scottyWindow
 
+        Transition scottyTest(self, ScottyPressEvent):
+            print "Scotty event!"
+            
         Transition buttonEvent(self, ButtonPressEvent):
             print "Misc button event", event, event.device, event.value
 

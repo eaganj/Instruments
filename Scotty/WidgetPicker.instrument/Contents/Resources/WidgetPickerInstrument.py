@@ -1,1 +1,1 @@
-../../../../WidgetPickerInstrument.py
+../../../../../Scotty/Injector/WidgetPickerInstrument.py

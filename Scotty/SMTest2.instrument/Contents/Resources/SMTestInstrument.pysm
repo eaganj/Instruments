@@ -1,6 +1,6 @@
 from IIKit import *
 
-from SMTestGlassView import *
+from SMTest2GlassView import *
 
 class SMTestInstrument(SMInstrument):
     name = u"State Machine Tester 2" # FIXME refactor
@@ -19,7 +19,7 @@ class SMTestInstrument(SMInstrument):
         
     def newGlassViewForGlassWindow(self, glassWindow):
         window = glassWindow.parentWindow()
-        view = SMTestGlassView(window.frame(), self)
+        view = SMTest2GlassView(window.frame(), self)
         return view
     
     def shouldHijackInteraction(self):
