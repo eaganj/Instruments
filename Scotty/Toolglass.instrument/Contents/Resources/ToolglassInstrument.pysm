@@ -1,0 +1,70 @@
+from Foundation import *
+from AppKit import *
+import objc
+
+import jre.cocoa
+import jre.debug
+
+from IIKit import *
+from WidgetProtocol import *
+from WidgetPickerInstrument import *
+from StateMachines import *
+
+from ToolglassWindowController import *
+
+class ScottyToolglassInstrument(Instrument):
+    name = u"Toolglass"
+    verb = u"Show Toolglass"
+    
+    class ToolglassSM(statemachine):
+        def __init__(self, instrument):
+            super(ScottyToolglassInstrument.ToolglassSM, self).__init__()
+            self.instrument = instrument
+        
+        State start:
+            Transition press(self, LeftMouseDown):
+                print "pressed in window:", event.window()
+                print "pressed on toolglass:", event.locationInWindow()
+                view = self.instrument.objectUnderToolglassForEvent(event)
+                print "pressed over object :", view, 'in', view.window().title() if view else None
+    
+    def __init__(self):
+        super(ScottyToolglassInstrument, self).__init__()
+        self.stateMachine = self.ToolglassSM(self)
+        self.windowController = ToolglassWindowController(self)
+        self.picker = WidgetPickerInstrument()
+    
+    def activate(self):
+        super(ScottyToolglassInstrument, self).activate()
+        self.windowController.showWindow_(self)
+    
+    def windowUnderToolglassForEvent(self, event):
+        slocation = event.locationInScreen()
+        return self.windowUnderToolglassAtPoint(slocation)
+            
+    def windowUnderToolglassAtPoint(self, slocation):
+        ''' Return the window underneath a point, `slocation`, expressed in screen coordinates '''
+        for window in NSApp().orderedWindows():
+            myWindow = self.windowController.window()
+            if isinstance(window, (GlassWindow,)) or not window.isVisible() or window == myWindow:
+                # Only include real, visible windows
+                continue
+                
+            if NSMouseInRect(slocation, window.frame(), False):
+                return window
+
+    def objectUnderToolglassForEvent(self, event):
+        return self.objectUnderToolglassAtPoint(event.locationInScreen())
+    
+    def objectUnderToolglassAtPoint(self, slocation):
+        window = self.windowUnderToolglassAtPoint(slocation)
+        if window:
+            wlocation = window.convertScreenToBase_(slocation)
+            # FIXME:  Need to think about how the Toolglass could better do picking.
+            return self.picker.objectAtPointInWindow(wlocation, window)
+        
+        return None
+    
+ToolglassInstrument = ScottyToolglassInstrument
+
+__all__ = 'ToolglassInstrument ScottyToolglassInstrument'.split()

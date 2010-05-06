@@ -1,0 +1,51 @@
+from Foundation import *
+from AppKit import *
+import objc
+
+from IIKit import *
+from IIKit.plugin.fr.lri.eaganj.instrument.Toolglass.ToolglassInstrument import *
+
+from SuckNDropInstrument import *
+
+import jre.debug
+
+class ScottySuckNDropToolglassInstrument(ToolglassInstrument):
+    name = u"SuckNDrop Toolglass"
+    verb = u"Show SuckNDrop Toolglass"
+    
+    class ToolglassSM(statemachine):
+        def __init__(self, instrument):
+            super(ScottySuckNDropToolglassInstrument.ToolglassSM, self).__init__()
+            self.instrument = instrument
+        
+        State start:
+            Transition press(self, LeftMouseDown):
+                print "pressed in window:", event.window()
+                print "pressed on toolglass:", event.locationInWindow()
+                view = self.instrument.objectUnderToolglassForEvent(event)
+                print "pressed over object :", view, 'in', view.window().title() if view else None
+
+    def __init__(self):
+        super(ScottySuckNDropToolglassInstrument, self).__init__()
+        self.stateMachine = ScottySuckNDropToolglassInstrument.ToolglassSM(self)
+        self.initToolglassWindow()
+    
+    def initToolglassWindow(self):
+        # print "Initialized SuckNDrop toolglass", self.windowController, self.windowController.window()
+        window = self.windowController.window()
+        contentView = window.contentView()
+        # view = SuckNDropInstrument(NSMakeRect(0, 0, 75, 75)) # FIXME: Figure out why this line fails
+        for row in range(2):
+            for col in range(7):
+                #view = SuckNDropInstrument.alloc().initWithFrame_(NSMakeRect(0, 0, 75, 75))
+                w, h = 75, 75
+                xpad = col*3
+                ypad = row*3
+                x = col*w + xpad
+                y = row*h + ypad
+                view = SuckNDropInstrument.alloc().initWithFrame_(NSMakeRect(x, y, w, h))
+                contentView.addSubview_(view)
+    
+SuckNDropToolglassInstrument = ScottySuckNDropToolglassInstrument
+
+__all__ = 'SuckNDropToolglassInstrument ScottySuckNDropToolglassInstrument'.split()

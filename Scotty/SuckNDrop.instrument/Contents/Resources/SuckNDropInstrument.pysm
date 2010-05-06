@@ -1,0 +1,239 @@
+from AppKit import *
+from Foundation import *
+import objc
+
+import jre.cocoa
+import jre.debug
+import jre.geom
+
+from IIKit import *
+from WidgetProtocol import *
+from WidgetPickerInstrument import *
+
+from ScottyEventFunnel import *
+from SuckNDropProxy import *
+
+def AND(*funcs):
+    def ander(event):
+        for f in funcs:
+            if not f(event):
+                return False
+        return True
+    return ander
+
+# FIXME:  Ideally, the view parts of the instrument should be separated from the instrument itself.
+class SuckNDropInstrument(StateMachineEventFunnel(NSView), Instrument):
+    name = u"SuckNDrop Button"
+    verb = u"Show SuckNDrop Button"
+    
+    class InstrumentSM(statemachine):
+        def __init__(self, instrument):
+            super(SuckNDropInstrument.InstrumentSM, self).__init__()
+            self.instrument = instrument
+            
+        State start:
+            Transition pressed(self, LeftMouseDown, guard=self.hovering) >> self.pressed:
+                pass
+        
+        State pressed:
+            Transition releasedOutside(self, LeftMouseUp, guard=self.notHovering) >> self.start:
+                pass
+                
+            Transition clicked(self, LeftMouseUp, guard=AND(self.hovering, self.onSuckable)) >> self.sucked:
+                try:
+                    obj = self.instrument.objectUnderInstrumentForEvent(event)
+                    self._suckedTarget = obj.target()
+                    self._suckedAction = obj.action()
+                    point = event.locationInScreen()
+                    self._suckedSender = self.instrument.proxyObjectIfNecessary_withEventAtPointOnScreen_(
+                                                                                        obj, point)
+                    #self.instrument.fillColor = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.35, 0.25, 0.25, 0.20)
+                    self.instrument.fillColor = NSColor.clearColor()
+                    self.instrument.grabView_fromPoint_(obj, point)
+                    self.instrument.setNeedsDisplay_(True)
+                    print "Sucked %s.%s from %s" % (self._suckedTarget, self._suckedAction, self._suckedSender)
+                except:
+                    jre.debug.printStackTrace()
+            
+            Transition clicked(self, LeftMouseUp, guard=self.hovering) >> self.start:
+                pass
+                print "Can't suck right now"
+        
+        State sucked:
+            Transition pressed(self, LeftMouseDown, guard=self.hovering) >> self.suckedAndPressed:
+                pass
+                    
+        State suckedAndPressed:
+            Transition releasedOutside(self, LeftMouseUp, guard=self.notHovering) >> self.sucked:
+                pass
+            
+            Transition clicked(self, LeftMouseUp, guard=self.hovering) >> self.sucked:
+                pass # drop
+                print "Drop object"
+                print "Send", self._suckedAction, "to", self._suckedTarget
+                action = getattr(self._suckedTarget, self._suckedAction.replace(':', '_'), None)
+                if action:
+                    action(self._suckedSender)
+        
+    
+        def hovering(self, event):
+            point = event.locationInWindow()
+            return NSMouseInRect(point, self.instrument.frame(), self.instrument.isFlipped())
+        
+        def notHovering(self, event):
+            return not self.hovering(event)
+        
+        def onSuckable(self, event):
+            obj = self.instrument.objectUnderInstrumentForEvent(event)
+            return obj is not None
+    
+    
+    def __new__(cls, *frame):
+        print "__new__", cls, frame
+        return cls.alloc().initWithFrame_(*frame)
+    
+    def windowUnderInstrumentForEvent(self, event):
+        slocation = event.locationInScreen()
+        return self.windowUnderInstrumentAtPoint(slocation)
+
+    def windowUnderInstrumentAtPoint(self, slocation):
+        ''' Return the window underneath a point, `slocation`, expressed in screen coordinates '''
+        
+        for window in NSApp().allOrderedWindows(): # allOrderedWindows is a Category hack from WindowHook
+            myWindow = self.window()
+            if isinstance(window, (GlassWindow,)) or not window.isVisible() or window == myWindow:
+                # Only include real, visible windows
+                continue
+
+            if NSMouseInRect(slocation, window.frame(), False):
+                return window
+
+    def objectUnderInstrumentForEvent(self, event):
+        return self.objectUnderInstrumentAtPoint(event.locationInScreen())
+
+    def objectUnderInstrumentAtPoint(self, slocation):
+        window = self.windowUnderInstrumentAtPoint(slocation)
+        if window:
+            wlocation = window.convertScreenToBase_(slocation)
+            # FIXME:  Need to think about how the Instrument could better do picking.
+            return self.picker.objectAtPointInWindow(wlocation, window)
+
+        return None
+    
+    def proxyObjectIfNecessary_withEventAtPointOnScreen_(self, obj, point):
+        if isinstance(obj, (NSOutlineView,)):
+            point = obj.window().convertScreenToBase_(point)
+            point = obj.convertPoint_fromView_(point, None)
+            row = obj.rowAtPoint_(point)
+            return MakeSuckNDropProxy(obj, row)
+        return obj
+        
+    def initWithFrame_(self, frame):
+        self = super(SuckNDropInstrument, self).initWithFrame_(frame)
+        if not self:
+            return self
+            
+        Instrument.__init__(self)
+        self.stateMachine = SuckNDropInstrument.InstrumentSM(self)
+        self.picker = WidgetPickerInstrument()
+        
+        self.fillColor = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.25, 0.25, 0.30, 0.10)
+        #self.fillColor = NSColor.clearColor()
+        self.strokeColor = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.40, 0.40, 0.45, 0.60)
+        self.bg = None
+        self.bgSrcRect = NSZeroRect
+        
+        return self
+    
+    def grabView_fromPoint_(self, obj, point):
+        rect = obj.visibleRect()
+        rect = NSMakeRect(rect[0][0], rect[0][1], 75, rect[1][1])
+        
+        backing = obj.bitmapImageRepForCachingDisplayInRect_(rect)
+        obj.cacheDisplayInRect_toBitmapImageRep_(rect, backing)
+        
+        # if isinstance(obj, (NSOutlineView,)):
+        #             point = obj.window().convertScreenToBase_(point)
+        #             point = obj.convertPoint_fromView_(point, None)
+        #             row = obj.rowAtPoint_(point)
+        #             col = obj.columnAtPoint_(point)
+        #             print "point:", point
+        #             itemRect = obj.frameOfCellAtColumn_row_(col, row)
+        #             print "frame:", obj.frame()
+        #             print "visib:", obj.visibleRect()
+        #             print rect
+        #             print itemRect
+        #             (rx, ry), (rw, rh) = rect
+        #             (ix, iy), (iw, ih) = itemRect
+        #             #rect = NSMakeRect(rx, iy, 75, 75)
+        #             #rect = NSMakeRect(rx, (ry+rh)-(iy+ih), 75, 60)
+        #             rect = NSMakeRect(ix, rh-iy-ih, iw, ih)
+        #             print rect
+        # 
+        # self.bgSrcRect = NSZeroRect
+        if isinstance(obj, (NSOutlineView,)):
+                    point = obj.window().convertScreenToBase_(point)
+                    point = obj.convertPoint_fromView_(point, None)
+                    row = obj.rowAtPoint_(point)
+                    col = obj.columnAtPoint_(point)
+                    itemRect = obj.frameOfCellAtColumn_row_(col, row)
+                    print "rect", col, row,":", rect
+                    print "item", col, row,":", itemRect
+                    (rx, ry), (rw, rh) = rect
+                    (ix, iy), (iw, ih) = itemRect
+                    itemRect = NSMakeRect(ix, rh-iy-ih, min(iw, 75), ih)
+                    
+                
+                    newBacking = NSImage.alloc().initWithSize_(itemRect[1])
+                    try:
+                        newBacking.lockFocus()
+                        backing.drawInRect_fromRect_operation_fraction_respectFlipped_hints_(
+                                                    NSMakeRect(0, 0, *itemRect[1]),
+                                                    itemRect, NSCompositeCopy, 1.0, True, {})
+                    finally:
+                        newBacking.unlockFocus()
+                    
+                    jre.cocoa.writeImage(newBacking, "/Users/eaganj/Desktop/temptest.tiff")
+                    backing = newBacking.representations()[0] # FIXME!
+                    
+        
+        # if isinstance(obj, (NSOutlineView,)):
+        #     point = obj.window().convertScreenToBase_(point)
+        #     point = obj.convertPoint_fromView_(point, None)
+        #     row = obj.rowAtPoint_(point)
+        #     col = obj.columnAtPoint_(point)
+        #     if not obj.isFlipped():
+        #         print "Flipped"
+        #         srcRect = obj.frameOfCellAtColumn_row_(col, row)
+        #     else:
+        #         print "not Flipped"
+        #         srcRect = obj.frameOfCellAtColumn_row_(col, row)
+        #         (x, y), (w, h) = srcRect
+        #         (rx, ry), (rw, rh) = rect
+        #         srcRect = NSMakeRect(x, ry+rh-y, w, h)
+        #     
+        #     #print "frame for", col, row,":", rect
+        # else:
+        #     srcRect = rect
+            
+        self.bg = backing
+        # self.bgSrcRect = srcRect
+        
+    def drawRect_(self, rect):
+        if self.bg:
+            # print "Drew in rect:", rect, "from", self.bg.size()
+            irect = jre.geom.centerRectInRect(NSMakeRect(0, 0, *self.bg.size()), rect)
+            self.bg.drawInRect_fromRect_operation_fraction_respectFlipped_hints_(
+                                        irect, NSZeroRect, NSCompositeSourceOver, 0.75, True, {})
+
+
+            
+        self.fillColor.set()
+        # NSBezierPath.bezierPathWithRect_(rect).fill()
+        NSBezierPath.fillRect_(rect)
+        #NSRectFill(rect)
+        self.strokeColor.set()
+        NSFrameRect(rect)
+    
+
+__all__ = 'SuckNDropInstrument'.split()
