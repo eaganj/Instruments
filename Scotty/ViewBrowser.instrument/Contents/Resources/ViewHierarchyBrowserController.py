@@ -47,7 +47,7 @@ class ScottyViewHierarchyBrowserDelegate(NSObject):
         if not self:
             return self
             
-        self.columns = [ NSApp().windows() ]
+        self.columns = [ NSApp().allOrderedWindows() ]
         self.selected = None
 
         return self
