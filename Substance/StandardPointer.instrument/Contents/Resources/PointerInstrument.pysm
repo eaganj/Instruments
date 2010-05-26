@@ -1,0 +1,36 @@
+from IIKit import *
+
+import jre.debug
+
+class PointerInstrument(SubstanceSMInstrument):
+    '''
+    A very simple instrument that responds to pointing events by updating the position of the cursor.
+    '''
+    
+    name = u"Standard Pointer" # FIXME refactor
+    verb = u"Standard Pointing"
+    
+    def __init__(self):
+        super(PointerInstrument, self).__init__()
+    
+    def instantiate(self, with_state):
+        super(PointerInstrument, self).instantiate(with_state)
+        
+        # TODO: add proper cursor binding
+        cursors = self.sg/"cursors"
+        for cursor in cursors.get_children(self):
+            self._cursor = cursors/cursor
+            break
+        else:
+            self._cursor = None
+        
+    State start:
+        Transition point(self, Pointing, guard=lambda event: self._cursor is not None):
+            self._cursor.position = self, self.relativePoint2canvas(event.point)
+            # print "updated cursor position to", self._cursor.get_value(self, "position")
+    
+    def relativePoint2canvas(self, point):
+        sgw, sgh = self.sg.get_value(self, "width"), self.sg.get_value(self, "height")
+        x, y = point
+        return x * sgw, (1.0 - y) * sgh
+            
