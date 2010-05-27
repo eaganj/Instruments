@@ -50,6 +50,8 @@ class ScottySMTest2GlassView(NSView):
             return
         
         for stroke in self._paths:
+            if not stroke.points:
+                continue # Skip empty paths
             stroke.color.set()
             path = NSBezierPath.bezierPath()
             path.moveToPoint_(stroke.points[0])

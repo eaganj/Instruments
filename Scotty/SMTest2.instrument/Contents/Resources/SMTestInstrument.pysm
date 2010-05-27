@@ -31,6 +31,14 @@ class SMTestInstrument(SMInstrument):
             self.colorIndex = (self.colorIndex + 1) % len(self.colors)
             color = self.colors[self.colorIndex]
             self.glassView.addPathWithColor_(color)
+        
+        # Transition key(self, KeyDown, keyCode=53):
+        #     self.deactivate()
+        #     return True
+        
+        # Triggered on escape or command-.
+        Transition abort(self, CancelOperation):
+            self.deactivate()
 
     State drawing:
         def enter():

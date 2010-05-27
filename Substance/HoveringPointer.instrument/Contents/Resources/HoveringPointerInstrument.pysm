@@ -1,0 +1,76 @@
+from IIKit import *
+
+import jre.debug
+import jre.geom as geom
+
+from IIKit.plugin.fr.lri.eaganj.instrument.substance.Pointer.PointerInstrument import PointerInstrument
+
+from StateMachines import statemachine
+
+class HoveringPointerInstrument(PointerInstrument):
+    '''
+    A very simple instrument that changes the color of the cursor when it is hoving on an object.
+    '''
+    
+    name = u"Hovering Pointer" # FIXME refactor
+    verb = u"Hovering Pointing"
+    
+    State start:
+        Transition point(self, Pointing, guard=self.__hoverGuard) >> self.hovering:
+            pass
+    
+    State hovering:
+        def enter(self):
+            self._oldCursorColor = self._cursor.get_value(self, "color")
+            self._cursor.color = self, (1.0, 0.0, 0.0, 0.85)
+        
+        def leave(self):
+            self._cursor.color = self, self._oldCursorColor
+        
+        Transition point(self, Pointing, guard=lambda event: not self.isHovering(event)) >> self.start:
+            pass
+    
+    
+    def __hoverGuard(self, event):
+        return self._cursor is not None and self.isHovering(event)
+    
+    # def isHovering(self, event):
+    #     for nodeName in self.sg.get_children(self):
+    #         node = self.sg/nodeName
+    #         if node.has_value(self, "type") and node.has_value(self, "position") and node.has_value(self, "width") and node.has_value(self, "height"):
+    #             position = node.get_value(self, "position")
+    #             width = node.get_value(self, "width")
+    #             height = node.get_value(self, "height")
+    #             
+    #             return 
+    #     
+    #     return False
+    
+    def isHovering(self, event):
+        return self.getObjectAtPoint(event.point) is not None
+
+    def getObjectAtPoint(self, point):
+        x, y = point
+        for nodeName in self.sg.get_children(self):
+            node = self.sg/nodeName
+            #if ShapeProtocol.objectConforms(node):
+            if node.has_value(self, "type") and node.has_value(self, "position") and node.has_value(self, "width") and node.has_value(self, "height"):
+                nx, ny = map(int, node.get_value(self, "position"))
+                nw = int(node.get_value(self, "width"))
+                nh = int(node.get_value(self, "height"))
+                
+                if node.has_value(self, "rotation"):
+                    rotation = node.get_value(self, "rotation")
+                else:
+                    rotation = 0
+
+                nodeRect = geom.MakeRect(nx, ny, nw, nh)
+                cx, cy = self._cursor.get_value(self, "position")
+                cr = self._cursor.get_value(self, "width") / 2 # FIXME: Assumes cursors are round
+                cx += cr
+                cy += cr
+                cursorRect = geom.MakeRect(cx - cr, cy - cr, 2*cr, 2*cr)
+                if geom.rectIntersectsRectWithRotation(cursorRect, nodeRect, rotation):
+                    return node
+
+        return None

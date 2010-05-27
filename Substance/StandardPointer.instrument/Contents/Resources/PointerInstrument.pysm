@@ -9,6 +9,7 @@ class PointerInstrument(SubstanceSMInstrument):
     
     name = u"Standard Pointer" # FIXME refactor
     verb = u"Standard Pointing"
+    consumesEvents = False
     
     def __init__(self):
         super(PointerInstrument, self).__init__()
@@ -24,13 +25,15 @@ class PointerInstrument(SubstanceSMInstrument):
         else:
             self._cursor = None
         
+        self._sgw, self._sgh = self.sg.get_value(self, "width"), self.sg.get_value(self, "height")
+        print "Pointer bound to cursor:", self._cursor
+        
     State start:
         Transition point(self, Pointing, guard=lambda event: self._cursor is not None):
             self._cursor.position = self, self.relativePoint2canvas(event.point)
             # print "updated cursor position to", self._cursor.get_value(self, "position")
     
     def relativePoint2canvas(self, point):
-        sgw, sgh = self.sg.get_value(self, "width"), self.sg.get_value(self, "height")
         x, y = point
-        return x * sgw, (1.0 - y) * sgh
+        return x * self._sgw, (1.0 - y) * self._sgh
             
