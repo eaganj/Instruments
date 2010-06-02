@@ -16,7 +16,7 @@ class HoveringPointerInstrument(PointerInstrument):
     verb = u"Hovering Pointing"
     
     State start:
-        Transition point(self, Pointing, guard=self.__hoverGuard) >> self.hovering:
+        Transition point(self, Pointing, guard=self._hoverGuard) >> self.hovering:
             pass
     
     State hovering:
@@ -31,7 +31,7 @@ class HoveringPointerInstrument(PointerInstrument):
             pass
     
     
-    def __hoverGuard(self, event):
+    def _hoverGuard(self, event):
         return self._cursor is not None and self.isHovering(event)
     
     # def isHovering(self, event):

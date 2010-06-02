@@ -1,0 +1,118 @@
+from IIKit import *
+
+import jre.debug
+import jre.geom as geom
+
+from IIKit.plugin.fr.lri.eaganj.instrument.substance.HoveringPointer.HoveringPointerInstrument import HoveringPointerInstrument
+
+from StateMachines import statemachine
+
+class MoveInstrument(HoveringPointerInstrument):
+    '''
+    A very simple instrument that changes the color of the cursor when it is hoving on an object.
+    '''
+    
+    name = u"Move Tool" # FIXME refactor
+    verb = u"Move objects"
+    priority = 0
+    
+    State start:
+        Transition point(self, Pointing, guard=self._hoverGuard) >> self.hovering:
+            pass
+    
+    State hovering:
+        # def enter(self):
+        #     self._oldCursorColor = self._cursor.get_value(self, "color")
+        #     self._cursor.color = self, (1.0, 0.0, 0.0, 0.85)
+        # 
+        # def leave(self):
+        #     self._cursor.color = self, self._oldCursorColor
+        
+        Transition unhover(self, Pointing, guard=lambda event: not self.isHovering(event)) >> self.start:
+            pass
+        
+        Transition press(self, ButtonPress) >> self.moving:
+            # print "-->", event
+            point = self._cursor.get_value(self, "position")
+            target = self.getObjectAtPoint(point)
+            # print "cursor:", point
+            # print "target:", target.get_value(self, "position"), target
+            
+            self._target = target
+            # self._offset = geom.delta(point, target.get_value(self, "position"))
+            self._offset = (0, 0)
+            # print "offset:", self._offset
+            self._lastPoint = point
+                
+    State moving:
+        Transition move(self, Pointing):
+            # print "-->", event
+            cursorPoint = self._cursor.get_value(self, "position")
+            dx, dy = geom.delta(self._lastPoint, cursorPoint)
+            tx, ty = map(float, self._target.get_value(self, "position"))
+            newPoint = (tx + dx, ty + dy)
+            self.moveObjectWithOffsetTo(self._target, self._offset, newPoint)
+            self._lastPoint = cursorPoint
+            # # self._target.position = self, self._lastPoint
+            # # print "Moved", self._target, "to", self._lastPoint
+            # print "cursor:", point
+            # print "target:", (tx, ty)
+            # print "delta :", (dx, dy)
+            # print "dest  :", newPoint, "plus offset", self._offset
+            
+        Transition release(self, ButtonRelease) >> self.hovering:
+            pass
+    
+    
+    def moveObjectWithOffsetTo(self, obj, offset, point):
+        x, y = point
+        ox, oy = offset
+        self.moveObjectTo(obj, (x + ox, y + oy))
+        print "Moved", obj, "with offset", offset, "to", point
+    
+    def moveObjectTo(self, obj, point):
+        obj.position = self, point
+        
+    # def __hoverGuard(self, event):
+    #     return self._cursor is not None and self.isHovering(event)
+    
+    # def isHovering(self, event):
+    #     for nodeName in self.sg.get_children(self):
+    #         node = self.sg/nodeName
+    #         if node.has_value(self, "type") and node.has_value(self, "position") and node.has_value(self, "width") and node.has_value(self, "height"):
+    #             position = node.get_value(self, "position")
+    #             width = node.get_value(self, "width")
+    #             height = node.get_value(self, "height")
+    #             
+    #             return 
+    #     
+    #     return False
+    
+    # def isHovering(self, event):
+    #     return self.getObjectAtPoint(event.point) is not None
+    # 
+    # def getObjectAtPoint(self, point):
+    #     x, y = point
+    #     for nodeName in self.sg.get_children(self):
+    #         node = self.sg/nodeName
+    #         #if ShapeProtocol.objectConforms(node):
+    #         if node.has_value(self, "type") and node.has_value(self, "position") and node.has_value(self, "width") and node.has_value(self, "height"):
+    #             nx, ny = map(int, node.get_value(self, "position"))
+    #             nw = int(node.get_value(self, "width"))
+    #             nh = int(node.get_value(self, "height"))
+    #             
+    #             if node.has_value(self, "rotation"):
+    #                 rotation = node.get_value(self, "rotation")
+    #             else:
+    #                 rotation = 0
+    # 
+    #             nodeRect = geom.MakeRect(nx, ny, nw, nh)
+    #             cx, cy = self._cursor.get_value(self, "position")
+    #             cr = self._cursor.get_value(self, "width") / 2 # FIXME: Assumes cursors are round
+    #             cx += cr
+    #             cy += cr
+    #             cursorRect = geom.MakeRect(cx - cr, cy - cr, 2*cr, 2*cr)
+    #             if geom.rectIntersectsRectWithRotation(cursorRect, nodeRect, rotation):
+    #                 return node
+    # 
+    #     return None
