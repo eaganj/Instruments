@@ -7,6 +7,8 @@ from IIKit.plugin.fr.lri.eaganj.instrument.substance.HoveringPointer.HoveringPoi
 
 from StateMachines import statemachine
 
+BUTTON1='button1'
+
 class MoveInstrument(HoveringPointerInstrument):
     '''
     A very simple instrument that lets the user move an object when a button is pressed.
@@ -15,16 +17,19 @@ class MoveInstrument(HoveringPointerInstrument):
     name = u"Move Tool" # FIXME refactor
     verb = u"Move objects"
     priority = 0
-    
-    State start:
-        Transition point(self, Pointing, guard=self._hoverGuard) >> self.hovering:
-            pass
-    
+
+    # FIXME: we call our start state "hovering" but it doesn't mean that.
     State hovering:
-        Transition unhover(self, Pointing, guard=lambda event: not self.isHovering(event)) >> self.start:
-            pass
-        
-        Transition press(self, ButtonPress) >> self.moving:
+        Transition press(self, ButtonPress, device="<bound>", guard=lambda event: event.binding == BUTTON1 and self._hoverGuard(event)) >> self.moving:
+    # State start:
+    #     Transition point(self, Pointing, guard=self._hoverGuard) >> self.hovering:
+    #         pass
+    # 
+    # State hovering:
+    #     Transition unhover(self, Pointing, guard=lambda event: not self.isHovering(event)) >> self.start:
+    #         pass
+    #     
+    #     Transition press(self, ButtonPress) >> self.moving:
             point = self._cursor.get_value(self, "position")
             target = self.getObjectAtPoint(point)
             
@@ -33,7 +38,7 @@ class MoveInstrument(HoveringPointerInstrument):
             self._lastPoint = point
                 
     State moving:
-        Transition move(self, Pointing):
+        Transition move(self, Pointing, device="<bound>"):
             cursorPoint = self._cursor.get_value(self, "position")
             dx, dy = geom.delta(self._lastPoint, cursorPoint)
             tx, ty = map(float, self._target.get_value(self, "position"))
@@ -42,10 +47,11 @@ class MoveInstrument(HoveringPointerInstrument):
             self.moveObjectTo(self._target, newPoint)
             self._lastPoint = cursorPoint
             
-        Transition releaseHover(self, ButtonRelease, guard=self.isHovering) >> self.hovering:
+        Transition releaseHover(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1 and self.isHovering(event)) >> self.hovering:
             pass
         
-        Transition release(self, ButtonRelease) >> self.start:
+        Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.hovering:
+        # Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.start:
             pass
     
     

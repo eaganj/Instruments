@@ -1,0 +1,54 @@
+from IIKit import *
+
+import jre.debug
+import jre.geom as geom
+
+from IIKit.plugin.fr.lri.eaganj.instrument.substance.HoveringPointer.HoveringPointerInstrument import HoveringPointerInstrument
+
+from StateMachines import statemachine
+
+BUTTON1='button2'
+
+class ScaleInstrument(HoveringPointerInstrument):
+    '''
+    A very simple instrument that lets the user move an object when a button is pressed.
+    '''
+    
+    name = u"Scale Tool" # FIXME refactor
+    verb = u"Scale objects"
+    priority = 0
+    
+    State start:
+        Transition press(self, ButtonPress, device="<bound>", guard=lambda event: event.binding==BUTTON1 and self._hoverGuard(event)) >> self.scaling:
+            pass
+    
+    State scaling:
+        def enter(self):
+            cursorPoint = self._cursor.get_value(self, "position")
+            self._target = self.getObjectAtPoint(cursorPoint)
+            self._scaleOrigin = cursorPoint
+            self._originalWidth = self._target.get_value(self, "width")
+            self._originalHeight = self._target.get_value(self, "height")
+            self._oldCursorColor = self._cursor.get_value(self, "color")
+            self._oldCursorSize = self._cursor.get_value(self, "width")
+            self._cursor.color = self, (0.5, 0.5, 0.8, 0.75)
+        
+        def leave(self):
+            self._cursor.color = self, self._oldCursorColor
+            self._cursor.width = self, self._oldCursorSize
+            self._cursor.height = self, self._oldCursorSize
+        
+        Transition point(self, Pointing, device="<bound>"):
+            cursorPoint = self._cursor.get_value(self, "position")
+            factor = 1.0 + (geom.dist(cursorPoint, self._scaleOrigin) / 1000)
+            factor = factor if cursorPoint[1] > self._scaleOrigin[1] else 1.0 / factor
+            
+            self._cursor.width = self, 100 * factor
+            self._cursor.height = self, 100 * factor
+            
+            self._target.width = self, self._originalWidth * factor
+            self._target.height = self, self._originalHeight * factor
+        
+        Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.start:
+            pass
+    
