@@ -47,7 +47,14 @@ class HoveringPointerInstrument(PointerInstrument):
     #     return False
     
     def isHovering(self, event):
-        return self.getObjectAtPoint(event.point) is not None
+        if hasattr(event, "point"):
+            point = event.point
+        elif self._cursor is not None:
+            point = self._cursor.get_value(self, "position")
+        else:
+            return False
+            
+        return self.getObjectAtPoint(point) is not None
 
     def getObjectAtPoint(self, point):
         x, y = point
