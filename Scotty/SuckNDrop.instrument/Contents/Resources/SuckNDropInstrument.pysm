@@ -67,8 +67,15 @@ class SuckNDropInstrument(StateMachineEventFunnel(NSView), Instrument):
             Transition releasedOutside(self, LeftMouseUp, guard=self.notHovering) >> self.sucked:
                 pass
             
+            Transition pressed(self, LeftMouseDown, guard=self.hovering):
+                window = self.instrument.windowUnderInstrumentForEvent(event)
+                self.instrument.fakeEventForWindow(event, window)
+            
+            Transition dragged(self, LeftMouseDragged):
+                window = self.instrument.windowUnderInstrumentForEvent(event)
+                self.instrument.fakeEventForWindow(event, window)
+                
             Transition clicked(self, LeftMouseUp, guard=self.hovering) >> self.sucked:
-                pass # drop
                 print "Drop object"
                 print "Send", self._suckedAction, "to", self._suckedTarget
                 action = getattr(self._suckedTarget, self._suckedAction.replace(':', '_'), None)
@@ -92,6 +99,25 @@ class SuckNDropInstrument(StateMachineEventFunnel(NSView), Instrument):
         print "__new__", cls, frame
         return cls.alloc().initWithFrame_(*frame)
     
+    def fakeEventForWindow(self, event, window):
+        return
+        # mouseEventWithType:location:modifierFlags:timestamp:windowNumber:context:eventNumber:clickCount:pressure:
+        wlocation = window.convertScreenToBase_(event.locationInScreen())
+        event = event.cocoaEvent()
+        fakeEvent = NSEvent.mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure_(
+            event.type(),
+            wlocation,
+            event.modifierFlags(),
+            event.timestamp(),
+            window.windowNumber(),
+            event.context(),
+            0,
+            event.clickCount(),
+            event.pressure())
+        
+        print "Simulating event in window", window.title()
+        # window.postEvent_atStart_(fakeEvent, True)
+        
     def windowUnderInstrumentForEvent(self, event):
         slocation = event.locationInScreen()
         return self.windowUnderInstrumentAtPoint(slocation)

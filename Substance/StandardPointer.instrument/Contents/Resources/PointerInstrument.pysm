@@ -21,23 +21,12 @@ class PointerInstrument(SubstanceSMInstrument):
     def instantiate(self, with_state):
         super(PointerInstrument, self).instantiate(with_state)
         
-        # TODO: add proper cursor binding
-        # cursors = self.sg/"cursors"
-        # for cursor in cursors.get_children(self):
-        #     self._cursor = cursors/cursor
-        #     # if cursor == "master":
-        #     #     break
-        #     break
-        # else:
-        #     self._cursor = None
-        
         self._cursor = None
         self.deviceID = None
         self._neverMoved = True
         self._sgw, self._sgh = self.sg.get_value(self, "width"), self.sg.get_value(self, "height")
         # print "Pointer bound to cursor:", self._cursor
     
-    # @Facet.HANDLER("<void>::<cursor:cursor>")
     def setCursor(self, cursor):
         self._cursor = self.sg/"cursors"/cursor
         self.deviceID = cursor
@@ -52,7 +41,6 @@ class PointerInstrument(SubstanceSMInstrument):
                 self._neverMoved = False
                 self._cursor.hidden = self, False
             # print "updated cursor position to", self._cursor.get_value(self, "position"), self.__class__
-            print "Moving cursor", self._cursor
     
     def relativePoint2canvas(self, point):
         x, y = point

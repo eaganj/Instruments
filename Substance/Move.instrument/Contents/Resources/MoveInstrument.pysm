@@ -33,6 +33,14 @@ class MoveInstrument(HoveringPointerInstrument):
             point = self._cursor.get_value(self, "position")
             target = self.getObjectAtPoint(point)
             
+            stacking_order = self.sg.get_value(self, "stacking_order")
+            try:
+                stacking_order.remove(target.node_name())
+            except IndexError:
+                pass
+            stacking_order.insert(0, target.node_name())
+            self.sg.stacking_order = self, stacking_order
+            
             self._target = target
             self._offset = (0, 0)
             self._lastPoint = point
@@ -46,13 +54,15 @@ class MoveInstrument(HoveringPointerInstrument):
             # self.moveObjectWithOffsetTo(self._target, self._offset, newPoint)
             self.moveObjectTo(self._target, newPoint)
             self._lastPoint = cursorPoint
-            
-        Transition releaseHover(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1 and self.isHovering(event)) >> self.hovering:
-            pass
-        
+
         Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.hovering:
-        # Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.start:
             pass
+            
+        # Transition releaseHover(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1 and self.isHovering(event)) >> self.hovering:
+        #     pass
+        
+        # Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.start:
+        #     pass
     
     
     def moveObjectWithOffsetTo(self, obj, offset, point):
