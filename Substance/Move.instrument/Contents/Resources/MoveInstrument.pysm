@@ -7,7 +7,8 @@ from IIKit.plugin.fr.lri.eaganj.instrument.substance.HoveringPointer.HoveringPoi
 
 from StateMachines import statemachine
 
-BUTTON1='button1'
+POINTER1=('pointing1', True)
+BUTTON1=('button1', False, 'Move')
 
 class MoveInstrument(HoveringPointerInstrument):
     '''
@@ -20,7 +21,8 @@ class MoveInstrument(HoveringPointerInstrument):
 
     # FIXME: we call our start state "hovering" but it doesn't mean that.
     State hovering:
-        Transition press(self, ButtonPress, device="<bound>", guard=lambda event: event.binding == BUTTON1 and self._hoverGuard(event)) >> self.moving:
+        Transition press(self, ButtonPress, device=BUTTON1, guard=self._hoverGuard) >> self.moving:
+        # Transition press(self, ButtonPress, device="<bound>", guard=lambda event: event.binding == BUTTON1 and self._hoverGuard(event)) >> self.moving:
     # State start:
     #     Transition point(self, Pointing, guard=self._hoverGuard) >> self.hovering:
     #         pass
@@ -46,7 +48,7 @@ class MoveInstrument(HoveringPointerInstrument):
             self._lastPoint = point
                 
     State moving:
-        Transition move(self, Pointing, device="<bound>"):
+        Transition move(self, Pointing, device=POINTER1):
             cursorPoint = self._cursor.get_value(self, "position")
             dx, dy = geom.delta(self._lastPoint, cursorPoint)
             tx, ty = map(float, self._target.get_value(self, "position"))
@@ -55,7 +57,8 @@ class MoveInstrument(HoveringPointerInstrument):
             self.moveObjectTo(self._target, newPoint)
             self._lastPoint = cursorPoint
 
-        Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.hovering:
+        #Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.hovering:
+        Transition release(self, ButtonRelease, device=BUTTON1) >> self.hovering:
             pass
             
         # Transition releaseHover(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1 and self.isHovering(event)) >> self.hovering:

@@ -2,6 +2,8 @@ from IIKit import *
 
 import jre.debug
 
+POINTER1=("pointing1", True)
+
 class PointerInstrument(SubstanceSMInstrument):
     '''
     A very simple instrument that responds to pointing events by updating the position of the cursor.
@@ -27,14 +29,24 @@ class PointerInstrument(SubstanceSMInstrument):
         self._sgw, self._sgh = self.sg.get_value(self, "width"), self.sg.get_value(self, "height")
         # print "Pointer bound to cursor:", self._cursor
     
-    def setCursor(self, cursor):
-        self._cursor = self.sg/"cursors"/cursor
-        self.deviceID = cursor
+    def setContext(self, context):
+        super(PointerInstrument, self).setContext(context)
+        assert context.cursor is not None, "Context must have a cursor"
+        self._cursor = self.sg/"cursors"/context.cursor
+        self.deviceID = context.cursor
         self._cursor.new_value(self, "deviceID", "The associated device, if any", self.deviceID)
-        print "Pointer bound to cursor:", self._cursor, "for", self.deviceID
+        # print "Pointer bound to cursor:", self._cursor, "for", self.deviceID
+    context = property(SubstanceSMInstrument.getContext, setContext)
+    
+    # def setCursor(self, cursor):
+    #     self._cursor = self.sg/"cursors"/cursor
+    #     self.deviceID = cursor
+    #     self._cursor.new_value(self, "deviceID", "The associated device, if any", self.deviceID)
+    #     print "Pointer bound to cursor:", self._cursor, "for", self.deviceID
         
     State start:
-        Transition point(self, Pointing, device='<bound>', guard=lambda event: self._cursor is not None):
+        Transition point(self, Pointing, device=POINTER1, guard=lambda event: self._cursor is not None):
+        # Transition point(self, Pointing, device='<bound>', guard=lambda event: self._cursor is not None):
             # self._cursor.position = self, self.relativePoint2canvas(event.point)
             self._cursor.position = self, event.point
             if self._neverMoved:

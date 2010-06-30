@@ -7,7 +7,8 @@ from IIKit.plugin.fr.lri.eaganj.instrument.substance.HoveringPointer.HoveringPoi
 
 from StateMachines import statemachine
 
-BUTTON1='button2'
+POINTING1=('pointing1', True)
+BUTTON1=('button1', False, 'Resize')
 
 class ScaleInstrument(HoveringPointerInstrument):
     '''
@@ -19,7 +20,7 @@ class ScaleInstrument(HoveringPointerInstrument):
     priority = 0
     
     State start:
-        Transition press(self, ButtonPress, device="<bound>", guard=lambda event: event.binding==BUTTON1 and self._hoverGuard(event)) >> self.scaling:
+        Transition press(self, ButtonPress, device=BUTTON1, guard=self._hoverGuard) >> self.scaling:
             pass
     
     State scaling:
@@ -38,7 +39,7 @@ class ScaleInstrument(HoveringPointerInstrument):
             self._cursor.width = self, self._oldCursorSize
             self._cursor.height = self, self._oldCursorSize
         
-        Transition point(self, Pointing, device="<bound>"):
+        Transition point(self, Pointing, device=POINTING1):
             cursorPoint = self._cursor.get_value(self, "position")
             factor = 1.0 + (geom.dist(cursorPoint, self._scaleOrigin) / 1000)
             factor = factor if cursorPoint[1] > self._scaleOrigin[1] else 1.0 / factor
@@ -49,6 +50,6 @@ class ScaleInstrument(HoveringPointerInstrument):
             self._target.width = self, self._originalWidth * factor
             self._target.height = self, self._originalHeight * factor
         
-        Transition release(self, ButtonRelease, device="<bound>", guard=lambda event: event.binding == BUTTON1) >> self.start:
+        Transition release(self, ButtonRelease, device=BUTTON1) >> self.start:
             pass
     
