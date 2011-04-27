@@ -1,0 +1,208 @@
+from Foundation import *
+from AppKit import *
+from Quartz import *
+from Quartz.QuartzCore import *
+import objc
+
+from IIKit import *
+
+from QTSRTGlassView import *
+from IIKit.ScottyGlassLayer import *
+
+import os
+from threading import Timer
+from pysrt import SubRipFile
+
+# import jre.debug
+
+class QTSRTInstrument(SMInstrument):
+    name = u"QuickTime Subtitler" # FIXME refactor
+    verb = u"Load subtitles..."
+    
+    def __init__(self):
+        super(QTSRTInstrument, self).__init__()
+        
+        self._timer = None
+        self.layer = None
+        
+    def wantsGlassWindow(self):
+        return True
+        
+    def newGlassViewForGlassWindow(self, glassWindow):
+        # FIXME:  Redo glass windows to support glass layers, etc.
+        # print "Making glass view for ", glassWindow
+        # window = glassWindow.parentWindow()
+        # view = QTSRTGlassView(window.frame(), self)
+        # return view
+        return None
+    
+    def shouldHijackInteraction(self):
+        return False
+    
+    State start:
+        pass
+        Transition press(self, LeftMouseDown) >> self.drawing:
+            pass
+            
+        # Triggered on escape or command-.
+        Transition abort(self, CancelOperation):
+            pass
+    
+    State drawing:
+        pass
+
+    def activate(self, context):
+        super(QTSRTInstrument, self).activate(context)
+        if context.activationSource:
+            target = context.activationSource.window().contentView()
+            target = target.subviews()[0].subviews()[0]
+            self.attachToView(target)
+        
+    def attachToView(self, view):
+        try:
+            MGMoviePlaybackView = objc.lookUpClass('MGMoviePlaybackView')
+        except objc.nosuchclass_error:
+            MGMoviePlaybackView = tuple()
+        
+        if not isinstance(view, MGMoviePlaybackView):
+            return None
+        
+        controller = view.playbackController()
+        movie = controller.movie()
+        self.subtitles = self.loadSubtitlesForMovie(movie)
+        self.layer = self.makeLayerForView(view)
+        view.layer().addSublayer_(self.layer)
+        
+        self.pollTimeForController(controller)
+    
+    def loadSubtitlesForMovie(self, movie):
+        fileName = movie.fileName()
+        if fileName:
+            fileNameRoot = os.path.splitext(fileName)[0]
+            srtFileName = fileNameRoot + '.srt'
+            # print "Movie:", fileName
+            # print "SRT  :", srtFileName, os.path.exists(srtFileName)
+            if os.path.exists(srtFileName):
+                try:
+                    subs = SubRipFile.open(srtFileName)
+                except UnicodeDecodeError:
+                    subs = SubRipFile.open(srtFileName, 'latin1')
+                subs.sort()
+                return subs
+    
+    def subtitleForTime(self, time):
+        ''' Get the subtitle entry for the specified `time` in seconds.  Returns None
+            if there is no such subtitle.
+        '''
+        if not self.subtitles:
+            return None
+        l, r = 0, len(self.subtitles) - 1
+        while l <= r:
+            pivot = l + (r-l)/2
+            sub = self.subtitles[pivot]
+            start = sub.start.ordinal / 1000.0
+            end = sub.end.ordinal / 1000.0
+            if start < time < end:
+                return sub
+            elif time < start:
+                r = pivot - 1
+            else:
+                l = pivot + 1
+        
+        return None
+    
+    @jre.cocoa.cocoa_threadsafe
+    def pollTimeForController(self, controller):
+        currentTime = controller.currentTime()
+        currentTimeInSeconds = currentTime[0] / float(currentTime[1])
+        # print "Current time: %ss" % (currentTimeInSeconds)
+        subtitle = self.subtitleForTime(currentTimeInSeconds)
+        subtitle = subtitle.text.strip() if subtitle else u''
+        # print "%ss: %s" % (currentTimeInSeconds, subtitle.encode('utf8'))
+        self.layer.setString_(subtitle)
+        self.layer.setHidden_(False if subtitle else True)
+        
+        if self._timer and self._timer.is_alive():
+            self._timer.cancel()
+        
+        self._timer = Timer(0.25, self.pollTimeForController, (controller,))
+        self._timer.start()
+    
+    def deactivate(self):
+        super(QTSRTInstrument, self).deactivate()
+        
+        if self._timer:
+            self._timer.cancel()
+        
+        if self.layer:
+            self.layer.removeFromSuperlayer()
+
+    def makeLayerForView(self, view):
+        layer = CATextLayer.layer()
+        layer.setFrame_(NSMakeRect(0, 0, view.layer().frame().size.width, 65))
+        layer.setAutoresizingMask_(kCALayerWidthSizable|kCALayerMaxYMargin)
+        layer.setBackgroundColor_(NSColor.colorWithCalibratedRed_green_blue_alpha_(0, 0, 0, 0.5).quartzColor())
+        layer.setAlignmentMode_(kCAAlignmentCenter)
+        layer.setWrapped_(True)
+        return layer
+        
+
+### MGMoviePlaybackController methods:
+# changeVolumeToMaximum_
+# changeVolumeToMinimum_
+# currentTime
+# duration
+# encodeWithCoder_
+# gotoBeginningOfPlaybackRange_
+# gotoBeginning_
+# gotoEndOfAvailableRanges_
+# gotoEndOfPlaybackRange_
+# gotoEnd_
+# gotoNextChapter_
+# gotoPreviousChapter_
+# handleBeginGestureWithEvent_
+# handleKeyDown_
+# handleScrollWheel_
+# handleSwipeWithEvent_
+# initWithCoder_
+# isJogging
+# isMuted
+# isPlaying
+# jogRate
+# joggingDidStop
+# movie
+# naturalSize
+# periodicallyUpdatesTime
+# rate
+# scanBackward_
+# scanForward_
+# selection
+# setCurrentTime_
+# setJogRate_
+# setMovie_
+# setMuted_
+# setPeriodicallyUpdatesTime_
+# setPlaying_
+# setRate_
+# setUpdateInterval_
+# setUpdateResolution_
+# setVolume_
+# skipBackwardThirtySeconds_
+# statusString
+# stepBackward_
+# stepForward_
+# timelineCell_willChangeTimeValue_
+# toggleMuted_
+# togglePlaying_
+# updateInterval
+# updateResolution
+# validateUserInterfaceItem_
+# volume
+# wouldHandleBeginGestureWithEvent_
+
+# from IIKit import *
+# im = InstrumentManager.sharedInstrumentManager()
+# i = im.instruments()[-1]()
+# from WidgetPickerInstrument import *
+# v = WidgetPickerInstrument.run()
+# i.attachToView(v)
