@@ -20,6 +20,8 @@ class ScottyViewHierarchyInstrument(Instrument):
         
     def newGlassViewForGlassWindow(self, glassWindow):
         window = glassWindow.parentWindow()
+        print " glassWindow:", glassWindow
+        print "parentwindow:", window
         view = ViewHierarchyGlassView(window.frame(), self)
         self._traverseWidgetTreeForWindow(window, view)
         return view

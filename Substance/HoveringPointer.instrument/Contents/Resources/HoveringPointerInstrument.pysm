@@ -56,6 +56,35 @@ class HoveringPointerInstrument(PointerInstrument):
             
         return self.getObjectAtPoint(point) is not None
 
+    def getObjectAtPointViaAccessor(self, point):
+        x, y = point
+        # for nodeName in self.sg.get_children(self):
+        #for nodeName in self.sg.get_value(self, 'stacking_order'):
+        stacking_order = self._ooaccessor.node_val("stacking_order")[:]
+        for nodeName in stacking_order:
+            node = self._ooaccessor[nodeName]
+            #if ShapeProtocol.objectConforms(node):
+            if node.node_has_value("type") and node.node_has_value("position") and node.node_has_value("width") and node.node_has_value("height"):
+                nx, ny = map(int, self._ooaccessor.node_val("position"))
+                nw = int(node.get_value(self, "width"))
+                nh = int(node.get_value(self, "height"))
+                
+                if node.has_value(self, "rotation"):
+                    rotation = node.get_value(self, "rotation")
+                else:
+                    rotation = 0
+
+                nodeRect = geom.MakeRect(nx, ny, nw, nh)
+                cx, cy = self._cursor.get_value(self, "position")
+                cr = self._cursor.get_value(self, "width") / 2 # FIXME: Assumes cursors are round
+                cx += cr
+                cy += cr
+                cursorRect = geom.MakeRect(cx - cr, cy - cr, 2*cr, 2*cr)
+                if geom.rectIntersectsRectWithRotation(cursorRect, nodeRect, rotation):
+                    return node
+
+        return None
+
     def getObjectAtPoint(self, point):
         x, y = point
         # for nodeName in self.sg.get_children(self):

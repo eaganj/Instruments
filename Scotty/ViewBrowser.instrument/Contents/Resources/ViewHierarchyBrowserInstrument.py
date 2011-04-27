@@ -31,8 +31,8 @@ class ScottyViewHierarchyBrowserInstrument(Instrument):
     def shouldHijackInteraction(self):
         return False
     
-    def activate(self):
-        super(ScottyViewHierarchyBrowserInstrument, self).activate()
+    def activate(self, context=None):
+        super(ScottyViewHierarchyBrowserInstrument, self).activate(context)
         if not self._controller:
             self._controller = ViewHierarchyBrowserController.alloc().initWithInstrument_(self)
         self._controller.showWindow_(self)

@@ -25,8 +25,8 @@ class PythonPromptInstrument(Instrument):
     def _initPrompt(self):
         self._interpreterController = None
     
-    def activate(self):
-        super(PythonPromptInstrument, self).activate()
+    def activate(self, context=None):
+        super(PythonPromptInstrument, self).activate(context)
         if not self._interpreterController:
             self._interpreterController = PythonInterpreterController.alloc().initWithInstrument_(self)
         self._interpreterController.showWindow_(self)
