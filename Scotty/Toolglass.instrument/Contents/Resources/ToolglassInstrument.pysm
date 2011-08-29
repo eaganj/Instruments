@@ -34,8 +34,8 @@ class ScottyToolglassInstrument(Instrument):
         self.windowController = ToolglassWindowController(self)
         self.picker = WidgetPickerInstrument()
     
-    def activate(self):
-        super(ScottyToolglassInstrument, self).activate()
+    def activate(self, context):
+        super(ScottyToolglassInstrument, self).activate(context)
         self.windowController.showWindow_(self)
     
     def windowUnderToolglassForEvent(self, event):

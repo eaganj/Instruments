@@ -19,15 +19,23 @@ class SMTestInstrument(SMInstrument):
         
     def newGlassViewForGlassWindow(self, glassWindow):
         window = glassWindow.parentWindow()
+        if not window:
+            return None
+            
         view = SMTest2GlassView(window.frame(), self)
         return view
     
     def shouldHijackInteraction(self):
         return True
     
+    def activate(self, context):
+        glassWindow = context.attachGlassWindowToActivationSource()
+        glassWindow.setContentView_(SMTest2GlassView(glassWindow.parentWindow().frame(), self))
+    
     State start:
         Transition press(self, LeftMouseDown) >> self.drawing:
-            self.glassView = InstrumentManager.sharedInstrumentManager().glassViewForWindow(event.window())
+            # self.glassView = InstrumentManager.sharedInstrumentManager().glassViewForWindow(event.window())
+            self.glassView = self.context.glassViewForWindow(event.window())
             self.colorIndex = (self.colorIndex + 1) % len(self.colors)
             color = self.colors[self.colorIndex]
             self.glassView.addPathWithColor_(color)
