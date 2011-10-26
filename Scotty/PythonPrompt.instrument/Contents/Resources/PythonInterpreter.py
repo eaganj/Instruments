@@ -1,3 +1,5 @@
+# Ripped from PyObjC, (barely) modified by James Eagan
+
 import sys
 import traceback
 import keyword
