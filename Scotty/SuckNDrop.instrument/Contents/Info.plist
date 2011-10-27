@@ -18,9 +18,9 @@
 	<string></string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© Copyright 2010, Université de Paris-Sud XI</string>
-	<key>iStarInstrumentScriptName</key>
+	<key>IIKitInstrumentScriptName</key>
 	<string>SuckNDropToolglassInstrument.pysm</string>
-	<key>iStar Required Plugins</key>
+	<key>IIKit Required Plugins</key>
 	<array>
 		<string>fr.lri.eaganj.instrument.Toolglass</string>
 	</array>

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Scotty -- a meta-toolkit for runtime toolkit overloading
 #
 # Copyright 2009-2011, Université Paris-Sud
