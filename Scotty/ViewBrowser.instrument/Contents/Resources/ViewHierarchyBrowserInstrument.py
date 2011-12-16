@@ -62,7 +62,7 @@ class ScottyViewHierarchyBrowserInstrument(Instrument):
         for glassWindow in glassWindows:
             parentWindow = glassWindow.parentWindow()
             glassWindow.setContentView_(ViewHierarchyBrowserGlassView(parentWindow.frame(), self))
-        self.deactivate() # FIXME: this should happen on window close!
+        # self.deactivate() # FIXME: this should happen on window close!
                 
     def mouseUp(self, event):
         if self._activatedOnce:

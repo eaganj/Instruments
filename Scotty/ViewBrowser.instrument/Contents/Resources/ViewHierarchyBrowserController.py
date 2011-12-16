@@ -52,6 +52,10 @@ class ScottyViewHierarchyBrowserController(NSWindowController):
         appName = NSFileManager.defaultManager().displayNameAtPath_(appBundlePath)
         # self.window().setTitle_(u"Browse Widget Hierarchy \u2014 %s" % (appName))
     
+    def windowWillClose_(self, notification):
+        assert self._instrument is not None
+        self._instrument.deactivate()
+        
     @objc.IBAction
     def displaySelectedWidget_(self, sender):
         widget = sender.selectedCell().representedObject()

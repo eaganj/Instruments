@@ -51,6 +51,6 @@ class PythonPromptInstrument(Instrument):
         if not self._interpreterController:
             self._interpreterController = PythonInterpreterController.alloc().initWithInstrument_(self)
         self._interpreterController.showWindow_(self)
-        self.deactivate() # Immediately deactivate # FIXME:  should deactivate when window closes
+        # self.deactivate() # Immediately deactivate # FIXME:  should deactivate when window closes
     
     

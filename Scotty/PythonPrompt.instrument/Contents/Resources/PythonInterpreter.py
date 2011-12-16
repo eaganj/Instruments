@@ -240,7 +240,7 @@ class PyInterpreter(NSObject):
 
     def awakeFromNib(self):
         self = super(PyInterpreter, self).init()
-        self._font = NSFont.userFixedPitchFontOfSize_(10)
+        self._font = NSFont.userFixedPitchFontOfSize_(14) # 10
         self._stderrColor = NSColor.redColor()
         self._stdoutColor = NSColor.blueColor()
         self._codeColor = NSColor.blackColor()
@@ -592,6 +592,7 @@ class PythonInterpreterController(NSWindowController):
     interpreter = objc.IBOutlet()
     
     def initWithInstrument_(self, instrument):
+        self.instrument = instrument
         nibPath = instrument._bundle_.pathForResource_ofType_(u'PyInterpreter', u'nib')
         self = super(PythonInterpreterController, self).initWithWindowNibPath_owner_(nibPath, self)
         if not self:
@@ -601,3 +602,6 @@ class PythonInterpreterController(NSWindowController):
     
     def awakeFromNib(self):
         self.window().setTitle_(u"Command Prompt \u2014 Python %s" % (sys.version.split()[0]))
+    
+    def windowWillClose_(self, notification):
+        self.instrument.deactivate()
